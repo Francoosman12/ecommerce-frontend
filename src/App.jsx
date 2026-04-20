@@ -7,6 +7,12 @@ import Home from "./pages/public/Home";
 import ProductDetail from "./pages/public/ProductDetail";
 import CustomerLogin from "./pages/public/CustomerLogin";
 import Register from "./pages/public/Register";
+import Checkout from "./pages/public/Checkout";
+import {
+  OrderSuccess,
+  OrderFailure,
+  OrderPending,
+} from "./pages/public/OrderStatus";
 import CartSidebar from "./components/layout/CartSidebar";
 
 // PÁGINAS ADMIN
@@ -34,13 +40,10 @@ function App() {
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/login" element={<CustomerLogin />} />
         <Route path="/register" element={<Register />} />
-
-        {/* Páginas de checkout (las crearemos en el siguiente paso) */}
-        {/* <Route path="/checkout"                element={<Checkout />} /> */}
-        {/* <Route path="/orden/exito/:id"          element={<OrderSuccess />} /> */}
-        {/* <Route path="/orden/fallo/:id"          element={<OrderFailure />} /> */}
-        {/* <Route path="/orden/pendiente/:id"      element={<OrderPending />} /> */}
-        {/* <Route path="/mis-pedidos"              element={<MyOrders />} /> */}
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/orden/exito/:id" element={<OrderSuccess />} />
+        <Route path="/orden/fallo/:id" element={<OrderFailure />} />
+        <Route path="/orden/pendiente/:id" element={<OrderPending />} />
 
         {/* ── ZONA ADMIN ── */}
         <Route path="/admin" element={<Navigate to="/admin/login" />} />
@@ -52,7 +55,6 @@ function App() {
           <Route path="/admin/products/edit/:id" element={<ProductForm />} />
           <Route path="/admin/categories" element={<CategoryManager />} />
           <Route path="/admin/financial" element={<FinancialManager />} />
-          {/* <Route path="/admin/orders"           element={<OrderManager />} /> */}
         </Route>
 
         {/* 404 */}
