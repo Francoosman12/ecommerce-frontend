@@ -5,42 +5,73 @@ import { toast } from "react-toastify";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // Datos del usuario
+  const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [loading, setLoading] = useState(true);
 
-  // Verificar si ya estoy logueado al recargar la página
+  // Al recargar, si hay token verificamos el perfil real
   useEffect(() => {
-    if (token) {
-      // (Opcional) Aquí podrías llamar a un endpoint /profile para verificar si el token sigue vivo
-      // Por ahora asumimos que si hay token, está logueado
-      setUser({ name: "Administrador" });
-    }
-    setLoading(false);
+    const verifyToken = async () => {
+      if (token) {
+        try {
+          const { data } = await axiosClient.get("/users/profile");
+          setUser(data);
+        } catch {
+          // Token expirado o inválido — limpiamos
+          localStorage.removeItem("token");
+          setToken(null);
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
+    verifyToken();
   }, [token]);
 
+  // ─── Helper interno ────────────────────────────────────────────────────
+  const saveSession = (data) => {
+    localStorage.setItem("token", data.token);
+    setToken(data.token);
+    setUser(data);
+  };
+
+  // ─── LOGIN (admin y clientes) ──────────────────────────────────────────
   const login = async (email, password) => {
     try {
       const { data } = await axiosClient.post("/users/login", {
         email,
         password,
       });
-
-      // Si sale bien:
-      localStorage.setItem("token", data.token); // 1. Guardar en disco
-      setToken(data.token); // 2. Guardar en estado
-      setUser(data); // 3. Guardar datos usuario
-      toast.success(`Bienvenido, ${data.name}`);
-
-      return true; // Éxito
+      saveSession(data);
+      toast.success(`Bienvenido, ${data.name} 👋`);
+      return { success: true, role: data.role };
     } catch (error) {
-      console.error(error);
-      const msg = error.response?.data?.message || "Error al iniciar sesión";
+      const msg =
+        error.response?.data?.message || "Email o contraseña incorrectos";
       toast.error(msg);
-      return false; // Falló
+      return { success: false };
     }
   };
 
+  // ─── REGISTRO CLIENTE ──────────────────────────────────────────────────
+  const register = async (name, email, password) => {
+    try {
+      const { data } = await axiosClient.post("/users/register", {
+        name,
+        email,
+        password,
+      });
+      saveSession(data);
+      toast.success(`¡Cuenta creada! Bienvenido, ${data.name} 🎉`);
+      return { success: true };
+    } catch (error) {
+      const msg = error.response?.data?.message || "Error al crear la cuenta";
+      toast.error(msg);
+      return { success: false };
+    }
+  };
+
+  // ─── LOGOUT ────────────────────────────────────────────────────────────
   const logout = () => {
     localStorage.removeItem("token");
     setToken(null);
@@ -48,14 +79,36 @@ export const AuthProvider = ({ children }) => {
     toast.info("Sesión cerrada");
   };
 
+  // ─── ACTUALIZAR DIRECCIÓN ──────────────────────────────────────────────
+  const updateAddress = async (addressData) => {
+    try {
+      const { data } = await axiosClient.put("/users/address", addressData);
+      setUser(data);
+      return { success: true };
+    } catch (error) {
+      return { success: false };
+    }
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, token, login, logout, isAuthenticated: !!token, loading }}
+      value={{
+        user,
+        token,
+        loading,
+        login,
+        register,
+        logout,
+        updateAddress,
+        isAuthenticated: !!token,
+        isAdmin: user?.role === "admin",
+        isCustomer: user?.role === "customer",
+        isTucuman: user?.address?.isTucuman || false,
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Hook personalizado para usar esto fácil
 export const useAuth = () => useContext(AuthContext);

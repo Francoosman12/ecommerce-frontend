@@ -5,11 +5,13 @@ import "react-toastify/dist/ReactToastify.css";
 // PÁGINAS PÚBLICAS
 import Home from "./pages/public/Home";
 import ProductDetail from "./pages/public/ProductDetail";
+import CustomerLogin from "./pages/public/CustomerLogin";
+import Register from "./pages/public/Register";
 import CartSidebar from "./components/layout/CartSidebar";
 
 // PÁGINAS ADMIN
 import Login from "./pages/admin/Login";
-import Dashboard from "./pages/admin/Dashboard"; // 👈 IMPORTANTE: Usamos este
+import Dashboard from "./pages/admin/Dashboard";
 import ProductForm from "./pages/admin/ProductForm";
 import CategoryManager from "./pages/admin/CategoryManager";
 import FinancialManager from "./pages/admin/FinancialManager";
@@ -19,35 +21,41 @@ import RequireAuth from "./components/layout/RequireAuth";
 function App() {
   return (
     <BrowserRouter>
-      {/* Sistema de notificaciones global */}
       <ToastContainer
         position="bottom-right"
         theme="colored"
         autoClose={3000}
       />
       <CartSidebar />
+
       <Routes>
-        {/* --- ZONA PÚBLICA --- */}
+        {/* ── ZONA PÚBLICA ── */}
         <Route path="/" element={<Home />} />
         <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/login" element={<CustomerLogin />} />
+        <Route path="/register" element={<Register />} />
 
-        {/* --- ZONA ADMIN --- */}
-        {/* Si entran a /admin, redirigir a Login */}
+        {/* Páginas de checkout (las crearemos en el siguiente paso) */}
+        {/* <Route path="/checkout"                element={<Checkout />} /> */}
+        {/* <Route path="/orden/exito/:id"          element={<OrderSuccess />} /> */}
+        {/* <Route path="/orden/fallo/:id"          element={<OrderFailure />} /> */}
+        {/* <Route path="/orden/pendiente/:id"      element={<OrderPending />} /> */}
+        {/* <Route path="/mis-pedidos"              element={<MyOrders />} /> */}
 
+        {/* ── ZONA ADMIN ── */}
         <Route path="/admin" element={<Navigate to="/admin/login" />} />
-
-        {/* Formulario de Login Real */}
         <Route path="/admin/login" element={<Login />} />
 
-        {/* Dashboard Real (Carga la tabla de productos) */}
         <Route element={<RequireAuth />}>
           <Route path="/admin/dashboard" element={<Dashboard />} />
           <Route path="/admin/products/new" element={<ProductForm />} />
           <Route path="/admin/products/edit/:id" element={<ProductForm />} />
           <Route path="/admin/categories" element={<CategoryManager />} />
           <Route path="/admin/financial" element={<FinancialManager />} />
+          {/* <Route path="/admin/orders"           element={<OrderManager />} /> */}
         </Route>
-        {/* Ruta 404 */}
+
+        {/* 404 */}
         <Route
           path="*"
           element={
