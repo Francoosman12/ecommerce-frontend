@@ -21,6 +21,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import ProductForm from "./pages/admin/ProductForm";
 import CategoryManager from "./pages/admin/CategoryManager";
 import FinancialManager from "./pages/admin/FinancialManager";
+import OrderManager from "./pages/admin/OrderManager";
 
 import RequireAuth from "./components/layout/RequireAuth";
 
@@ -55,6 +56,7 @@ function App() {
           <Route path="/admin/products/edit/:id" element={<ProductForm />} />
           <Route path="/admin/categories" element={<CategoryManager />} />
           <Route path="/admin/financial" element={<FinancialManager />} />
+          <Route path="/admin/orders" element={<OrderManager />} />
         </Route>
 
         {/* 404 */}

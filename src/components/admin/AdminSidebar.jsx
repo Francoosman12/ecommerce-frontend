@@ -8,9 +8,9 @@ import {
   FaSignOutAlt,
   FaHome,
   FaTimes,
+  FaClipboardList,
 } from "react-icons/fa";
 
-// Recibimos la prop onClose (opcional)
 const AdminSidebar = ({ onClose }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -19,8 +19,6 @@ const AdminSidebar = ({ onClose }) => {
     logout();
     navigate("/");
   };
-
-  // Al hacer clic en un link, cerramos el menú (si estamos en mobile)
   const handleLinkClick = () => {
     if (onClose) onClose();
   };
@@ -34,7 +32,6 @@ const AdminSidebar = ({ onClose }) => {
 
   return (
     <aside className="bg-white h-full flex flex-col justify-between overflow-y-auto">
-      {/* BOTÓN CERRAR (Solo visible en Mobile) */}
       <div className="md:hidden absolute top-4 right-4">
         <button
           onClick={onClose}
@@ -45,17 +42,15 @@ const AdminSidebar = ({ onClose }) => {
       </div>
 
       <div>
-        {/* LOGO */}
         <div className="p-8">
           <h2 className="text-2xl font-black text-gray-800 tracking-tighter">
-            PANEL<span className="text-indigo-600">BAHÍA</span>
+            PANEL<span className="text-indigo-600">ADMIN</span>
           </h2>
           <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-semibold">
             Administración
           </p>
         </div>
 
-        {/* MENÚ */}
         <nav className="px-4 space-y-2">
           <NavLink
             to="/admin/dashboard"
@@ -63,31 +58,32 @@ const AdminSidebar = ({ onClose }) => {
             end
             onClick={handleLinkClick}
           >
-            <FaBoxOpen size={18} />
-            Productos
+            <FaBoxOpen size={18} /> Productos
           </NavLink>
-
+          <NavLink
+            to="/admin/orders"
+            className={navLinkClass}
+            onClick={handleLinkClick}
+          >
+            <FaClipboardList size={18} /> Pedidos
+          </NavLink>
           <NavLink
             to="/admin/financial"
             className={navLinkClass}
             onClick={handleLinkClick}
           >
-            <FaPercentage size={18} />
-            Tasas y Precios
+            <FaPercentage size={18} /> Tasas y Precios
           </NavLink>
-
           <NavLink
             to="/admin/categories"
             className={navLinkClass}
             onClick={handleLinkClick}
           >
-            <FaTags size={18} />
-            Categorías
+            <FaTags size={18} /> Categorías
           </NavLink>
         </nav>
       </div>
 
-      {/* ZONA INFERIOR */}
       <div className="p-4 border-t border-gray-100 space-y-2 pb-8">
         <Link
           to="/"
