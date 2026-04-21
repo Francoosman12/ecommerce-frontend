@@ -1,89 +1,117 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { FaLock, FaUser } from "react-icons/fa";
+import { FaLock, FaEnvelope } from "react-icons/fa";
+
+const MargaritaFlower = () => (
+  <svg width="52" height="52" viewBox="0 0 100 100">
+    <g transform="translate(50,50)">
+      {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
+        <ellipse
+          key={deg}
+          cx="0"
+          cy="-26"
+          rx="8"
+          ry="16"
+          fill="#f9eae7"
+          opacity="0.7"
+          transform={`rotate(${deg})`}
+        />
+      ))}
+      <circle cx="0" cy="0" r="11" fill="#D4A843" />
+    </g>
+  </svg>
+);
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-
-    const success = await login(email, password);
-
-    if (success) {
-      navigate("/admin/dashboard"); // Redirigir al panel si entra
-    }
+    const result = await login(email, password);
+    if (result.success) navigate("/admin/dashboard");
     setIsSubmitting(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-2xl overflow-hidden p-8 transform transition-all">
+    <div className="min-h-screen bg-cin-950 flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        {/* Logo + nombre */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold text-indigo-700">
-            Panel Administrativo
-          </h2>
-          <p className="text-gray-500 mt-2">
-            Ingresa tus credenciales para gestionar el catálogo
+          <div className="flex justify-center mb-3">
+            <MargaritaFlower />
+          </div>
+          <h1 className="font-display text-2xl text-cin-100">margarita</h1>
+          <p className="text-cin-500 text-xs mt-1 uppercase tracking-widest">
+            Panel de administración
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* EMAIL */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaUser className="text-gray-400" />
+        {/* Card */}
+        <div className="bg-cin-900 rounded-2xl border border-cin-800 p-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-cin-500 uppercase tracking-wide mb-2">
+                Email
+              </label>
+              <div className="relative">
+                <FaEnvelope
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-cin-600"
+                  size={13}
+                />
+                <input
+                  type="email"
+                  required
+                  placeholder="admin@margarita.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-cin-800 border border-cin-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-cin-500 text-cin-100 placeholder-cin-600 text-sm"
+                />
+              </div>
             </div>
-            <input
-              type="email"
-              required
-              placeholder="correo@ejemplo.com"
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
 
-          {/* PASSWORD */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaLock className="text-gray-400" />
+            <div>
+              <label className="block text-xs font-medium text-cin-500 uppercase tracking-wide mb-2">
+                Contraseña
+              </label>
+              <div className="relative">
+                <FaLock
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-cin-600"
+                  size={13}
+                />
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-cin-800 border border-cin-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-cin-500 text-cin-100 text-sm"
+                />
+              </div>
             </div>
-            <input
-              type="password"
-              required
-              placeholder="Contraseña"
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={`w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md transition-all flex justify-center items-center ${
-              isSubmitting ? "opacity-70 cursor-not-allowed" : ""
-            }`}
-          >
-            {isSubmitting ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              "Ingresar al Sistema"
-            )}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-sm text-gray-400">
-          Casa Bahia Tucumán &copy; {new Date().getFullYear()}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-cin-600 hover:bg-cin-500 disabled:opacity-60 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2 mt-2"
+            >
+              {isSubmitting ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                "Ingresar al panel"
+              )}
+            </button>
+          </form>
         </div>
+
+        <p className="text-center text-cin-700 text-xs mt-6">
+          &copy; {new Date().getFullYear()} Margarita Accesorios
+        </p>
       </div>
     </div>
   );

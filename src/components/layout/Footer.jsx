@@ -3,116 +3,132 @@ import {
   FaWhatsapp,
   FaMapMarkerAlt,
   FaInstagram,
-  FaFacebook,
   FaClock,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import logo from "../../assets/casa-bahia.png";
+
+const MargaritaLogo = () => (
+  <svg width="42" height="42" viewBox="0 0 100 100">
+    <g transform="translate(50,50)">
+      {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
+        <ellipse
+          key={deg}
+          cx="0"
+          cy="-28"
+          rx="9"
+          ry="18"
+          fill="#f9eae7"
+          opacity="0.8"
+          transform={`rotate(${deg})`}
+        />
+      ))}
+      <circle cx="0" cy="0" r="12" fill="#D4A843" />
+    </g>
+  </svg>
+);
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-900 text-white pt-12 pb-6 mt-auto">
+    <footer className="bg-cin-950 text-cin-200 pt-14 pb-6 mt-auto">
       <div className="container mx-auto px-4">
-        {/* GRILLA DE INFO */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8 border-b border-gray-800 pb-8">
-          {/* 1. BRANDING */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10 border-b border-cin-900 pb-10">
+          {/* BRANDING */}
           <div>
-            <Link to="/" className="flex items-center">
-              <img
-                src={logo}
-                alt="Casa Bahía Logo"
-                className="h-20 w-auto object-contain" // h-10 (40px) es un buen tamaño para navbar
-              />
-            </Link>
-            <p className="text-gray-400 text-sm leading-relaxed pt-5">
-              Amoblamientos y confort para tu hogar en Tucumán. Calidad
-              garantizada y la mejor financiación directa.
+            <div className="flex items-center gap-2 mb-4">
+              <MargaritaLogo />
+              <span className="font-display text-2xl text-cin-100 tracking-tight">
+                margarita
+              </span>
+            </div>
+            <p className="text-cin-400 text-sm leading-relaxed">
+              Bufandones artesanales y accesorios de moda femenina. Diseños
+              únicos, materiales seleccionados y el calor que necesitás.
             </p>
+            {/* Instagram */}
+            <a
+              href="https://www.instagram.com/margarita_accesorios.11"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 mt-4 text-cin-400 hover:text-cin-200 transition-colors text-sm"
+            >
+              <FaInstagram size={16} />
+              @margarita_accesorios.11
+            </a>
           </div>
 
-          {/* 2. LINKS RÁPIDOS */}
+          {/* LINKS RÁPIDOS */}
           <div>
-            <h4 className="font-bold text-lg mb-4 text-indigo-400">
-              Atención al Cliente
+            <h4 className="font-display text-cin-100 text-lg mb-4">
+              La tienda
             </h4>
-            <ul className="space-y-2 text-sm text-gray-300">
+            <ul className="space-y-2 text-sm text-cin-400">
               <li>
-                <Link to="/" className="hover:text-white transition-colors">
-                  Catálogo
+                <Link to="/" className="hover:text-cin-200 transition-colors">
+                  Catálogo completo
                 </Link>
               </li>
               <li>
-                <span className="hover:text-white transition-colors cursor-pointer">
-                  Preguntas Frecuentes
-                </span>
+                <Link to="/" className="hover:text-cin-200 transition-colors">
+                  Bufandones
+                </Link>
               </li>
               <li>
-                <span className="hover:text-white transition-colors cursor-pointer">
-                  Información de Envíos
-                </span>
+                <Link to="/" className="hover:text-cin-200 transition-colors">
+                  Accesorios
+                </Link>
+              </li>
+              <li>
+                <Link to="/" className="hover:text-cin-200 transition-colors">
+                  Novedades
+                </Link>
               </li>
             </ul>
           </div>
 
-          {/* 3. CONTACTO */}
+          {/* CONTACTO */}
           <div>
-            <h4 className="font-bold text-lg mb-4 text-indigo-400">
-              Contáctanos
-            </h4>
+            <h4 className="font-display text-cin-100 text-lg mb-4">Contacto</h4>
             <ul className="space-y-3">
-              <li className="flex items-start gap-3 text-gray-300">
-                <FaClock className="mt-1 text-indigo-100" />
-                <span className="text-sm">
-                  Horario de Atención: Lunes a Sabado de 8:30 a 13:00
-                </span>
+              <li className="flex items-start gap-3 text-cin-400 text-sm">
+                <FaClock className="mt-0.5 text-cin-600 shrink-0" size={14} />
+                Lunes a Sábado de 9:00 a 18:00
               </li>
-              <li className="flex items-start gap-3 text-gray-300">
-                <FaMapMarkerAlt className="mt-1 text-indigo-500" />
-                <span className="text-sm">
-                  Silvano Bores 850, San Miguel de Tucumán
-                  <br />
-                  Tucumán, Argentina
-                </span>
+              <li className="flex items-start gap-3 text-cin-400 text-sm">
+                <FaMapMarkerAlt
+                  className="mt-0.5 text-cin-600 shrink-0"
+                  size={14}
+                />
+                San Miguel de Tucumán, Argentina
               </li>
-              <li className="flex items-center gap-3 text-gray-300">
-                <FaWhatsapp className="text-green-500 text-lg" />
+              <li className="flex items-center gap-3 text-cin-400">
+                <FaWhatsapp className="text-green-400 shrink-0" size={16} />
                 <a
                   href="https://wa.me/5493815225633"
                   target="_blank"
-                  className="text-sm hover:text-green-400 transition-colors font-semibold"
+                  rel="noopener noreferrer"
+                  className="text-sm hover:text-green-400 transition-colors font-medium"
                 >
-                  +54 9 381 522-5633
+                  Consultar por WhatsApp
                 </a>
               </li>
             </ul>
-
-            {/* REDES */}
-            <div className="flex gap-4 mt-6">
-              <a
-                href="https://www.facebook.com/share/1Dt2qANu6c/"
-                className="p-2 bg-gray-800 rounded-full hover:bg-blue-600 transition-colors"
-              >
-                <FaFacebook size={18} />
-              </a>
-              <a
-                href="https://www.instagram.com/bahia.hogar?igsh=MXA1eXJzcXI0YjhoNg=="
-                className="p-2 bg-gray-800 rounded-full hover:bg-pink-600 transition-colors"
-              >
-                <FaInstagram size={18} />
-              </a>
-            </div>
           </div>
         </div>
 
         {/* COPYRIGHT */}
-        <div className="text-center text-gray-600 text-xs flex flex-col md:flex-row justify-between items-center">
+        <div className="text-center text-cin-700 text-xs flex flex-col md:flex-row justify-between items-center gap-2">
           <p>
-            &copy; {new Date().getFullYear()} Casa Bahia Tucumán. Todos los
+            &copy; {new Date().getFullYear()} Margarita Accesorios. Todos los
             derechos reservados.
           </p>
-          <p className="mt-2 md:mt-0">
-            Desarrollado con{" "}
-            <a href="https://portfolio-francoosman.vercel.app/">Devos</a> 🚀
+          <p>
+            Desarrollado con 🌼 por{" "}
+            <a
+              href="https://portfolio-francoosman.vercel.app/"
+              className="hover:text-cin-400 transition-colors"
+            >
+              Devos
+            </a>
           </p>
         </div>
       </div>

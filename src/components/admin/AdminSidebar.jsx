@@ -11,10 +11,29 @@ import {
   FaClipboardList,
 } from "react-icons/fa";
 
+const MargaritaFlower = () => (
+  <svg width="32" height="32" viewBox="0 0 100 100">
+    <g transform="translate(50,50)">
+      {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
+        <ellipse
+          key={deg}
+          cx="0"
+          cy="-26"
+          rx="8"
+          ry="16"
+          fill="#f9eae7"
+          opacity="0.8"
+          transform={`rotate(${deg})`}
+        />
+      ))}
+      <circle cx="0" cy="0" r="11" fill="#D4A843" />
+    </g>
+  </svg>
+);
+
 const AdminSidebar = ({ onClose }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
-
   const handleLogout = () => {
     logout();
     navigate("/");
@@ -24,79 +43,79 @@ const AdminSidebar = ({ onClose }) => {
   };
 
   const navLinkClass = ({ isActive }) =>
-    `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+    `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm ${
       isActive
-        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 font-semibold"
-        : "text-gray-500 hover:bg-indigo-50 hover:text-indigo-600"
+        ? "bg-cin-700 text-white font-medium shadow-sm"
+        : "text-cin-400 hover:bg-cin-800 hover:text-cin-100"
     }`;
 
   return (
-    <aside className="bg-white h-full flex flex-col justify-between overflow-y-auto">
+    <aside className="bg-cin-950 h-full flex flex-col justify-between overflow-y-auto">
       <div className="md:hidden absolute top-4 right-4">
         <button
           onClick={onClose}
-          className="p-2 text-gray-500 hover:text-red-500"
+          className="p-2 text-cin-500 hover:text-cin-200"
         >
-          <FaTimes size={24} />
+          <FaTimes size={20} />
         </button>
       </div>
-
       <div>
-        <div className="p-8">
-          <h2 className="text-2xl font-black text-gray-800 tracking-tighter">
-            PANEL<span className="text-indigo-600">ADMIN</span>
-          </h2>
-          <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-semibold">
-            Administración
-          </p>
+        <div className="p-6 pb-4 flex items-center gap-3 border-b border-cin-900">
+          <MargaritaFlower />
+          <div>
+            <h2 className="font-display text-lg text-cin-100 tracking-tight">
+              margarita
+            </h2>
+            <p className="text-xs text-cin-600 uppercase tracking-widest">
+              Admin
+            </p>
+          </div>
         </div>
-
-        <nav className="px-4 space-y-2">
+        <nav className="px-3 py-4 space-y-1">
           <NavLink
             to="/admin/dashboard"
             className={navLinkClass}
             end
             onClick={handleLinkClick}
           >
-            <FaBoxOpen size={18} /> Productos
+            <FaBoxOpen size={15} /> Productos
           </NavLink>
           <NavLink
             to="/admin/orders"
             className={navLinkClass}
             onClick={handleLinkClick}
           >
-            <FaClipboardList size={18} /> Pedidos
+            <FaClipboardList size={15} /> Pedidos
           </NavLink>
           <NavLink
             to="/admin/financial"
             className={navLinkClass}
             onClick={handleLinkClick}
           >
-            <FaPercentage size={18} /> Tasas y Precios
+            <FaPercentage size={15} /> Tasas y Precios
           </NavLink>
           <NavLink
             to="/admin/categories"
             className={navLinkClass}
             onClick={handleLinkClick}
           >
-            <FaTags size={18} /> Categorías
+            <FaTags size={15} /> Categorías
           </NavLink>
         </nav>
       </div>
-
-      <div className="p-4 border-t border-gray-100 space-y-2 pb-8">
+      <div className="p-3 border-t border-cin-900 space-y-1 pb-6">
         <Link
           to="/"
-          className="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-900 text-sm"
+          className="flex items-center gap-3 px-4 py-3 text-cin-500 hover:text-cin-200 text-sm rounded-xl hover:bg-cin-900 transition-colors"
           onClick={handleLinkClick}
         >
-          <FaHome /> Ver Tienda Pública
+          <FaHome size={14} /> Ver tienda
         </Link>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors font-medium"
+          className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-cin-900 rounded-xl transition-colors text-sm font-medium"
         >
-          <FaSignOutAlt /> Cerrar Sesión
+          <FaSignOutAlt size={14} /> Cerrar sesión
         </button>
       </div>
     </aside>

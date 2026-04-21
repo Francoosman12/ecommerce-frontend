@@ -12,52 +12,117 @@ import {
   FaAngleLeft,
   FaAngleRight,
   FaCheckSquare,
+  FaStar,
+  FaTag,
+  FaBoxOpen,
+  FaClipboardList,
+  FaExclamationTriangle,
+  FaToggleOn,
+  FaToggleOff,
 } from "react-icons/fa";
 import axiosClient from "../../api/axiosClient";
 import { toast } from "react-toastify";
 
-const Dashboard = () => {
-  // 1. Data del Backend
-  const { products, loading, error, refetch } = useProducts(true);
+// ─── Tarjeta de métrica ──────────────────────────────────────────────────
+const MetricCard = ({ icon, label, value, sub, color }) => (
+  <div
+    className={`bg-white rounded-xl border border-cin-200 p-5 flex items-center gap-4`}
+  >
+    <div
+      className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${color}`}
+    >
+      {icon}
+    </div>
+    <div>
+      <p className="text-xs text-cin-400 font-medium uppercase tracking-wide">
+        {label}
+      </p>
+      <p className="text-2xl font-display font-semibold text-cin-800">
+        {value}
+      </p>
+      {sub && <p className="text-xs text-cin-400 mt-0.5">{sub}</p>}
+    </div>
+  </div>
+);
 
-  // 2. Estados Locales para UI
+const Dashboard = () => {
+  const { products, loading, error, refetch } = useProducts(true);
+  const [orders, setOrders] = useState({ total: 0, pending: 0 });
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // Default: 10 por página
-  const [selectedIds, setSelectedIds] = useState([]); // Para selección múltiple
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [filterStatus, setFilterStatus] = useState("all"); // all | active | inactive | low_stock | featured
 
-  // --- LÓGICA DE FILTRADO ---
-  const filteredProducts = products.filter((product) => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      product.name.toLowerCase().includes(term) ||
-      product.sku.toLowerCase().includes(term) ||
-      product.category?.name.toLowerCase().includes(term)
-    );
+  // Cargar resumen de órdenes
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const { data } = await axiosClient.get("/orders?limit=1");
+        const { data: pending } = await axiosClient.get(
+          "/orders?status=pendiente&limit=1",
+        );
+        setOrders({ total: data.total || 0, pending: pending.total || 0 });
+      } catch {
+        /* silencioso */
+      }
+    };
+    fetchOrders();
+  }, []);
+
+  // ── Métricas calculadas ──
+  const totalActive = products.filter((p) => p.isActive).length;
+  const totalInactive = products.filter((p) => !p.isActive).length;
+  const totalFeatured = products.filter((p) => p.isFeatured).length;
+  const lowStock = products.filter((p) => p.stock <= 3 && p.stock > 0).length;
+  const outOfStock = products.filter((p) => p.stock === 0).length;
+
+  // ── Filtrado ──
+  const filteredProducts = products.filter((p) => {
+    const matchSearch =
+      !searchTerm ||
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.category?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchFilter =
+      filterStatus === "all"
+        ? true
+        : filterStatus === "active"
+          ? p.isActive
+          : filterStatus === "inactive"
+            ? !p.isActive
+            : filterStatus === "low_stock"
+              ? p.stock <= 3
+              : filterStatus === "featured"
+                ? p.isFeatured
+                : filterStatus === "offer"
+                  ? p.priceOffer && p.priceOffer > 0
+                  : true;
+
+    return matchSearch && matchFilter;
   });
 
-  // --- LÓGICA DE PAGINACIÓN ---
+  // ── Paginación ──
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentProducts = filteredProducts.slice(
     startIndex,
-    startIndex + itemsPerPage
+    startIndex + itemsPerPage,
   );
 
-  // Resetear a página 1 si se busca algo
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, itemsPerPage]);
+  }, [searchTerm, itemsPerPage, filterStatus]);
 
-  // --- ACCIONES INDIVIDUALES ---
+  // ── Acciones individuales ──
   const handleDelete = async (id) => {
     if (window.confirm("¿Eliminar este producto?")) {
       try {
         await axiosClient.delete(`/products/${id}`);
         toast.success("Producto eliminado");
         refetch();
-      } catch (error) {
+      } catch {
         toast.error("Error al eliminar");
       }
     }
@@ -65,247 +130,325 @@ const Dashboard = () => {
 
   const handleToggleStatus = async (product) => {
     try {
-      const newStatus = !product.isActive;
       await axiosClient.put(`/products/${product._id}`, {
-        isActive: newStatus,
+        isActive: !product.isActive,
       });
-      toast.info(newStatus ? "Publicado 🟢" : "Pausado ⚫");
+      toast.info(!product.isActive ? "Producto publicado" : "Producto pausado");
       refetch();
-    } catch (error) {
+    } catch {
       toast.error("Error al cambiar estado");
     }
   };
 
-  // --- ACCIONES MÚLTIPLES (BULK) ---
+  const handleToggleFeatured = async (product) => {
+    try {
+      await axiosClient.put(`/products/${product._id}`, {
+        isFeatured: !product.isFeatured,
+      });
+      toast.info(
+        !product.isFeatured
+          ? "⭐ Marcado como destacado"
+          : "Quitado de destacados",
+      );
+      refetch();
+    } catch {
+      toast.error("Error al cambiar destacado");
+    }
+  };
+
+  // ── Selección múltiple ──
   const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      // Seleccionar TODOS los de la página actual (o todos los filtrados)
-      const idsOnPage = currentProducts.map((p) => p._id);
-      setSelectedIds(idsOnPage);
-    } else {
-      setSelectedIds([]);
-    }
+    setSelectedIds(e.target.checked ? currentProducts.map((p) => p._id) : []);
   };
-
   const handleSelectRow = (id) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter((item) => item !== id));
-    } else {
-      setSelectedIds([...selectedIds, id]);
-    }
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
   };
-
   const handleBulkDelete = async () => {
     if (
       window.confirm(
-        `¿Estás SEGURO de eliminar ${selectedIds.length} productos? Esta acción no se deshace.`
+        `¿Eliminar ${selectedIds.length} productos? Esta acción no se puede deshacer.`,
       )
     ) {
       try {
-        // Opción Pro: Crear endpoint de deleteMany en backend.
-        // Opción Rápida (Loop):
-        const promises = selectedIds.map((id) =>
-          axiosClient.delete(`/products/${id}`)
+        await Promise.all(
+          selectedIds.map((id) => axiosClient.delete(`/products/${id}`)),
         );
-        await Promise.all(promises);
-
-        toast.success(`Se eliminaron ${selectedIds.length} productos`);
+        toast.success(`${selectedIds.length} productos eliminados`);
         setSelectedIds([]);
         refetch();
-      } catch (error) {
+      } catch {
         toast.error("Error al eliminar algunos productos");
       }
     }
   };
 
+  const filters = [
+    { key: "all", label: "Todos", count: products.length },
+    { key: "active", label: "Activos", count: totalActive },
+    { key: "inactive", label: "Pausados", count: totalInactive },
+    { key: "featured", label: "Destacados", count: totalFeatured },
+    { key: "low_stock", label: "Stock bajo", count: lowStock + outOfStock },
+  ];
+
   return (
     <AdminLayout>
-      {/* 1. ENCABEZADO Y CONTROLES SUPERIORES */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Inventario</h1>
-          <p className="text-gray-500 text-sm">
-            Total productos: <b>{products.length}</b>
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-3 w-full md:w-auto">
-          {/* BUSCADOR */}
-          <div className="relative group w-full md:w-64">
-            <FaSearch className="absolute left-3 top-3 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar nombre, SKU..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+      {/* ── MÉTRICAS ── */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h1 className="font-display text-2xl text-cin-800">Inventario</h1>
+            <p className="text-cin-400 text-sm mt-0.5">
+              {products.length} productos en total
+            </p>
           </div>
-
-          {/* BOTÓN NUEVO */}
           <Link
             to="/admin/products/new"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-md flex items-center gap-2 font-bold text-sm transition-transform active:scale-95"
+            className="bg-cin-700 hover:bg-cin-800 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 font-medium text-sm transition-colors shadow-sm"
           >
-            <FaPlus /> Nuevo
+            <FaPlus size={12} /> Nuevo producto
           </Link>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <MetricCard
+            icon={<FaBoxOpen className="text-white" size={18} />}
+            label="Activos"
+            value={totalActive}
+            sub={`${totalInactive} pausados`}
+            color="bg-cin-600"
+          />
+          <MetricCard
+            icon={<FaStar className="text-white" size={18} />}
+            label="Destacados"
+            value={totalFeatured}
+            sub="en el home"
+            color="bg-gold"
+          />
+          <MetricCard
+            icon={<FaExclamationTriangle className="text-white" size={16} />}
+            label="Stock bajo"
+            value={lowStock}
+            sub={`${outOfStock} sin stock`}
+            color="bg-red-500"
+          />
+          <MetricCard
+            icon={<FaClipboardList className="text-white" size={18} />}
+            label="Pedidos"
+            value={orders.total}
+            sub={`${orders.pending} pendientes`}
+            color="bg-cin-800"
+          />
         </div>
       </div>
 
-      {/* 2. BARRA DE ACCIONES MÚLTIPLES (Aparece si seleccionas) */}
-      {selectedIds.length > 0 && (
-        <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-lg mb-4 flex justify-between items-center animate-pulse-slow">
-          <span className="text-indigo-800 font-bold text-sm flex items-center gap-2">
-            <FaCheckSquare /> {selectedIds.length} seleccionados
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={handleBulkDelete}
-              className="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-2 rounded-lg font-bold shadow-sm transition-colors"
-            >
-              <FaTrash /> Eliminar Selección
-            </button>
-            <button
-              onClick={() => setSelectedIds([])}
-              className="text-gray-500 text-xs px-3 hover:underline"
-            >
-              Cancelar
-            </button>
+      {/* ── FILTROS + BUSCADOR ── */}
+      <div className="bg-white rounded-xl border border-cin-200 mb-4 overflow-hidden">
+        <div className="p-4 flex flex-wrap gap-3 items-center border-b border-cin-100">
+          <div className="relative flex-1 min-w-48">
+            <FaSearch
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-cin-300"
+              size={13}
+            />
+            <input
+              type="text"
+              placeholder="Buscar nombre, SKU, categoría..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 border border-cin-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cin-300 bg-cin-50 text-cin-800 placeholder-cin-300"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {filters.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setFilterStatus(f.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterStatus === f.key ? "bg-cin-700 text-white" : "bg-cin-50 text-cin-600 hover:bg-cin-100 border border-cin-200"}`}
+              >
+                {f.label} <span className="opacity-70">({f.count})</span>
+              </button>
+            ))}
           </div>
         </div>
-      )}
 
-      {/* 3. TABLA DE DATOS */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {loading && (
-          <div className="p-20 text-center flex justify-center text-indigo-500">
-            <FaSpinner className="animate-spin text-3xl" />
+        {/* Barra bulk actions */}
+        {selectedIds.length > 0 && (
+          <div className="bg-cin-50 border-b border-cin-200 px-4 py-2.5 flex justify-between items-center">
+            <span className="text-cin-700 font-medium text-sm flex items-center gap-2">
+              <FaCheckSquare className="text-cin-600" size={14} />{" "}
+              {selectedIds.length} seleccionados
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={handleBulkDelete}
+                className="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+              >
+                Eliminar selección
+              </button>
+              <button
+                onClick={() => setSelectedIds([])}
+                className="text-cin-400 text-xs px-3 hover:text-cin-600"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         )}
 
-        {error && <div className="p-10 text-center text-red-500">{error}</div>}
+        {/* ── TABLA ── */}
+        {loading && (
+          <div className="p-16 flex justify-center">
+            <FaSpinner className="animate-spin text-cin-500 text-2xl" />
+          </div>
+        )}
+        {error && (
+          <div className="p-10 text-center text-red-500 text-sm">{error}</div>
+        )}
 
         {!loading && !error && (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-left whitespace-nowrap">
-                <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider font-semibold border-b border-gray-100">
+                <thead className="bg-cin-50 text-cin-500 text-xs uppercase tracking-wider border-b border-cin-100">
                   <tr>
-                    {/* CHECKBOX CABECERA */}
                     <th className="p-4 w-10">
                       <input
                         type="checkbox"
-                        className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                        className="rounded cursor-pointer w-4 h-4 accent-cin-600"
                         onChange={handleSelectAll}
                         checked={
                           currentProducts.length > 0 &&
                           currentProducts.every((p) =>
-                            selectedIds.includes(p._id)
+                            selectedIds.includes(p._id),
                           )
                         }
                       />
                     </th>
                     <th className="p-4">Producto</th>
                     <th className="p-4 text-center">Estado</th>
-                    <th className="p-4">SKU / Categoría</th>
+                    <th className="p-4 text-center">Destacado</th>
                     <th className="p-4 text-center">Stock</th>
                     <th className="p-4 text-right">Precio</th>
                     <th className="p-4 text-center">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-cin-100">
                   {currentProducts.map((product) => (
                     <tr
                       key={product._id}
-                      className={`hover:bg-indigo-50/30 transition-colors ${
-                        selectedIds.includes(product._id) ? "bg-indigo-50" : ""
-                      }`}
+                      className={`hover:bg-cin-50/50 transition-colors ${selectedIds.includes(product._id) ? "bg-cin-50" : ""}`}
                     >
-                      {/* CHECKBOX FILA */}
                       <td className="p-4">
                         <input
                           type="checkbox"
-                          className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
+                          className="rounded cursor-pointer w-4 h-4 accent-cin-600"
                           checked={selectedIds.includes(product._id)}
                           onChange={() => handleSelectRow(product._id)}
                         />
                       </td>
 
+                      {/* Producto */}
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded border border-gray-200 bg-white shrink-0 overflow-hidden">
-                            <img
-                              src={
-                                product.images?.[0]?.url ||
-                                "https://via.placeholder.com/50"
-                              }
-                              className="w-full h-full object-cover"
-                              alt=""
-                            />
+                          <div className="h-10 w-10 rounded-lg border border-cin-200 bg-cin-50 shrink-0 overflow-hidden">
+                            {product.images?.[0]?.url ? (
+                              <img
+                                src={product.images[0].url}
+                                className="w-full h-full object-cover"
+                                alt=""
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-cin-100" />
+                            )}
                           </div>
-                          <span
-                            className="font-semibold text-gray-700 text-sm max-w-[200px] truncate block"
-                            title={product.name}
-                          >
-                            {product.name}
-                          </span>
+                          <div className="min-w-0">
+                            <p className="font-medium text-cin-800 text-sm truncate max-w-[180px]">
+                              {product.name}
+                            </p>
+                            <p className="text-xs text-cin-400 font-mono">
+                              {product.sku} ·{" "}
+                              <span className="text-cin-500">
+                                {product.category?.name}
+                              </span>
+                            </p>
+                          </div>
                         </div>
                       </td>
 
+                      {/* Toggle activo */}
                       <td className="p-4 text-center">
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={product.isActive}
-                            onChange={() => handleToggleStatus(product)}
-                          />
-                          <div className="w-8 h-4 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-green-500"></div>
-                        </label>
+                        <button
+                          onClick={() => handleToggleStatus(product)}
+                          title={product.isActive ? "Pausar" : "Publicar"}
+                          className={`transition-colors ${product.isActive ? "text-green-500 hover:text-green-700" : "text-cin-300 hover:text-cin-500"}`}
+                        >
+                          {product.isActive ? (
+                            <FaToggleOn size={24} />
+                          ) : (
+                            <FaToggleOff size={24} />
+                          )}
+                        </button>
                       </td>
 
-                      <td className="p-4">
-                        <div className="flex flex-col text-xs">
-                          <span className="font-mono text-gray-500 bg-gray-100 px-1 rounded w-fit mb-1">
-                            {product.sku}
-                          </span>
-                          <span className="text-indigo-500">
-                            {product.category?.name || "Sin Cat"}
-                          </span>
-                        </div>
+                      {/* Toggle destacado */}
+                      <td className="p-4 text-center">
+                        <button
+                          onClick={() => handleToggleFeatured(product)}
+                          title={
+                            product.isFeatured
+                              ? "Quitar destacado"
+                              : "Marcar como destacado"
+                          }
+                          className={`transition-colors ${product.isFeatured ? "text-gold hover:text-yellow-600" : "text-cin-200 hover:text-gold"}`}
+                        >
+                          <FaStar size={18} />
+                        </button>
                       </td>
 
+                      {/* Stock */}
                       <td className="p-4 text-center">
                         <span
-                          className={`text-xs font-bold px-2 py-1 rounded border ${
+                          className={`text-xs font-bold px-2 py-1 rounded-lg border ${
                             product.stock === 0
                               ? "bg-red-50 text-red-600 border-red-100"
-                              : "bg-green-50 text-green-700 border-green-100"
+                              : product.stock <= 3
+                                ? "bg-amber-50 text-amber-600 border-amber-100"
+                                : "bg-green-50 text-green-700 border-green-100"
                           }`}
                         >
-                          {product.stock}
+                          {product.stock === 0 ? "Sin stock" : product.stock}
                         </span>
                       </td>
 
+                      {/* Precio */}
                       <td className="p-4 text-right">
-                        <p className="font-bold text-gray-800 text-sm">
+                        <p className="font-display font-semibold text-cin-700 text-sm">
                           {formatPrice(product.prices?.cash)}
                         </p>
+                        {product.priceOffer > 0 && (
+                          <p className="text-xs text-cin-400 line-through">
+                            {formatPrice(product.priceBase)}
+                          </p>
+                        )}
                       </td>
 
+                      {/* Acciones */}
                       <td className="p-4 text-center">
-                        <div className="flex justify-center gap-2">
+                        <div className="flex justify-center gap-3">
                           <Link
                             to={`/admin/products/edit/${product._id}`}
-                            className="text-gray-400 hover:text-indigo-600 transition-colors"
+                            className="text-cin-300 hover:text-cin-600 transition-colors"
+                            title="Editar"
                           >
-                            <FaEdit size={16} />
+                            <FaEdit size={15} />
                           </Link>
                           <button
                             onClick={() => handleDelete(product._id)}
-                            className="text-gray-400 hover:text-red-500 transition-colors"
+                            className="text-cin-300 hover:text-red-500 transition-colors"
+                            title="Eliminar"
                           >
-                            <FaTrash size={16} />
+                            <FaTrash size={15} />
                           </button>
                         </div>
                       </td>
@@ -315,61 +458,53 @@ const Dashboard = () => {
               </table>
             </div>
 
-            {/* 4. FOOTER PAGINACIÓN Y CONTROL */}
-            {filteredProducts.length > 0 && (
-              <div className="bg-gray-50 p-4 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
-                {/* Selector Items por página */}
-                <div className="flex items-center text-sm text-gray-500">
-                  <span className="mr-2">Ver filas:</span>
+            {/* Footer paginación */}
+            {filteredProducts.length > 0 ? (
+              <div className="bg-cin-50 p-4 border-t border-cin-100 flex flex-col md:flex-row items-center justify-between gap-3">
+                <div className="flex items-center text-sm text-cin-500 gap-2">
+                  <span>Filas:</span>
                   <select
                     value={itemsPerPage}
                     onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                    className="border border-gray-300 rounded p-1 bg-white focus:outline-indigo-500"
+                    className="border border-cin-200 rounded-lg p-1.5 bg-white text-cin-700 text-sm focus:outline-none"
                   >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
+                    {[5, 10, 20, 50].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
                   </select>
                 </div>
-
-                {/* Texto Info */}
-                <div className="text-xs text-gray-400">
-                  Mostrando {startIndex + 1} -{" "}
+                <p className="text-xs text-cin-400">
+                  {startIndex + 1}–
                   {Math.min(startIndex + itemsPerPage, filteredProducts.length)}{" "}
                   de {filteredProducts.length}
-                </div>
-
-                {/* Botones Prev/Next */}
+                </p>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.max(prev - 1, 1))
-                    }
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                     disabled={currentPage === 1}
-                    className="p-2 border rounded hover:bg-white disabled:opacity-50 disabled:hover:bg-transparent"
+                    className="p-2 border border-cin-200 rounded-lg hover:bg-white disabled:opacity-40 text-cin-600 transition-colors"
                   >
-                    <FaAngleLeft />
+                    <FaAngleLeft size={12} />
                   </button>
-                  <span className="text-sm font-bold text-gray-700 px-2">
-                    Página {currentPage} de {totalPages}
+                  <span className="text-sm text-cin-600 px-2 font-medium">
+                    {currentPage} / {totalPages}
                   </span>
                   <button
                     onClick={() =>
-                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                      setCurrentPage((p) => Math.min(p + 1, totalPages))
                     }
                     disabled={currentPage === totalPages}
-                    className="p-2 border rounded hover:bg-white disabled:opacity-50 disabled:hover:bg-transparent"
+                    className="p-2 border border-cin-200 rounded-lg hover:bg-white disabled:opacity-40 text-cin-600 transition-colors"
                   >
-                    <FaAngleRight />
+                    <FaAngleRight size={12} />
                   </button>
                 </div>
               </div>
-            )}
-
-            {filteredProducts.length === 0 && (
-              <div className="p-10 text-center text-gray-400 italic">
-                No se encontraron productos con tu búsqueda.
+            ) : (
+              <div className="p-10 text-center text-cin-400 text-sm italic">
+                No se encontraron productos con ese filtro.
               </div>
             )}
           </>

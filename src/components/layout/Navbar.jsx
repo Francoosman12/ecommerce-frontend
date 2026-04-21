@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
 import {
-  FaShoppingCart,
-  FaUserLock,
+  FaShoppingBag,
   FaSearch,
   FaTachometerAlt,
   FaTimes,
@@ -13,12 +12,31 @@ import {
   FaSignOutAlt,
   FaClipboardList,
   FaChevronDown,
+  FaUserLock,
 } from "react-icons/fa";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
 import { useSearch } from "../../context/SearchContext";
 import { formatPrice } from "../../utils/formatPrice";
-import logo from "../../../public/casabahiamini.png";
+
+const MargaritaLogo = ({ size = 36 }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100">
+    <g transform="translate(50,50)">
+      {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
+        <ellipse
+          key={deg}
+          cx="0"
+          cy="-28"
+          rx="9"
+          ry="18"
+          fill="#f9eae7"
+          transform={`rotate(${deg})`}
+        />
+      ))}
+      <circle cx="0" cy="0" r="12" fill="#D4A843" />
+    </g>
+  </svg>
+);
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -26,25 +44,21 @@ const Navbar = () => {
   const { isAuthenticated, isAdmin, isCustomer, user, logout } = useAuth();
   const { setSearchTerm } = useSearch();
 
-  // Buscador
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const searchContainerRef = useRef(null);
-
-  // Menú usuario
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef(null);
   const userMenuRef = useRef(null);
 
-  // Buscador predictivo
   useEffect(() => {
     if (!query.trim()) {
       setSuggestions([]);
       setIsOpen(false);
       return;
     }
-
     const delay = setTimeout(async () => {
       setLoading(true);
       try {
@@ -58,22 +72,16 @@ const Navbar = () => {
         setSuggestions(filtered.slice(0, 5));
         setIsOpen(true);
       } catch {
-        /* silencioso */
       } finally {
         setLoading(false);
       }
     }, 400);
-
     return () => clearTimeout(delay);
   }, [query]);
 
-  // Cerrar al clickear fuera
   useEffect(() => {
     const handler = (e) => {
-      if (
-        searchContainerRef.current &&
-        !searchContainerRef.current.contains(e.target)
-      )
+      if (searchRef.current && !searchRef.current.contains(e.target))
         setIsOpen(false);
       if (userMenuRef.current && !userMenuRef.current.contains(e.target))
         setUserMenuOpen(false);
@@ -82,222 +90,247 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const handleShowAllResults = () => {
+  const handleShowAll = () => {
     setSearchTerm(query);
     setIsOpen(false);
+    setSearchOpen(false);
     navigate("/");
   };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") handleShowAllResults();
-  };
-
   const handleLogout = () => {
     logout();
     setUserMenuOpen(false);
     navigate("/");
   };
-
   const itemsCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
   return (
-    <nav className="bg-white shadow-sm sticky top-0 z-50">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-        {/* LOGO */}
-        <Link
-          to="/"
-          className="flex items-center shrink-0"
-          onClick={() => {
-            setSearchTerm("");
-            setQuery("");
-          }}
-        >
-          <img
-            src={logo}
-            alt="Logo"
-            className="h-10 md:h-12 w-auto object-contain"
-          />
-        </Link>
+    <>
+      <div className="bg-cin-900 text-cin-100 text-center py-2 text-xs tracking-widest uppercase">
+        Envíos a toda Argentina · Nueva colección disponible
+      </div>
 
-        {/* BUSCADOR */}
-        <div
-          ref={searchContainerRef}
-          className="hidden md:flex flex-1 max-w-xl relative"
-        >
-          <div className="relative w-full">
-            <input
-              type="text"
-              placeholder="¿Qué estás buscando? (Sillones, Mesas...)"
-              className={`w-full pl-4 pr-10 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 bg-gray-50 transition-all text-sm ${isOpen ? "rounded-b-none border-indigo-400 ring-2 ring-indigo-100" : "border-gray-200"}`}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onFocus={() => {
-                if (query && suggestions.length > 0) setIsOpen(true);
-              }}
-            />
-            {loading ? (
-              <FaSpinner className="absolute right-3 top-3 text-indigo-500 animate-spin" />
-            ) : query ? (
-              <FaTimes
-                className="absolute right-3 top-3 text-gray-400 cursor-pointer hover:text-red-500"
-                onClick={() => {
-                  setQuery("");
-                  setIsOpen(false);
-                  setSearchTerm("");
-                }}
+      <nav className="bg-cin-50 border-b border-cin-200 sticky top-0 z-50">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
+          <Link
+            to="/"
+            className="flex items-center gap-2 shrink-0"
+            onClick={() => {
+              setSearchTerm("");
+              setQuery("");
+            }}
+          >
+            <MargaritaLogo size={38} />
+            <span className="font-display text-xl text-cin-800 tracking-tight hidden sm:block">
+              Margarita
+            </span>
+          </Link>
+
+          <div
+            ref={searchRef}
+            className="hidden md:flex flex-1 max-w-lg relative"
+          >
+            <div className="relative w-full">
+              <FaSearch
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-cin-400"
+                size={13}
               />
-            ) : (
-              <FaSearch className="absolute right-3 top-3 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar bufandones, accesorios..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleShowAll()}
+                onFocus={() => {
+                  if (query && suggestions.length > 0) setIsOpen(true);
+                }}
+                className={`w-full pl-9 pr-9 py-2.5 bg-white border text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-cin-300 focus:border-cin-400 transition-all ${isOpen ? "rounded-b-none border-cin-400" : "border-cin-200"}`}
+              />
+              {loading ? (
+                <FaSpinner
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-cin-400 animate-spin"
+                  size={13}
+                />
+              ) : query ? (
+                <FaTimes
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-cin-300 cursor-pointer hover:text-cin-600"
+                  size={13}
+                  onClick={() => {
+                    setQuery("");
+                    setIsOpen(false);
+                    setSearchTerm("");
+                  }}
+                />
+              ) : null}
+            </div>
+
+            {isOpen && (
+              <div className="absolute top-full left-0 w-full bg-white border border-t-0 border-cin-300 rounded-b-xl shadow-lg z-50 overflow-hidden">
+                {suggestions.length > 0 ? (
+                  <ul className="divide-y divide-cin-100">
+                    {suggestions.map((prod) => {
+                      const thumb =
+                        prod.images?.[0]?.url?.replace(
+                          "/upload/",
+                          "/upload/f_auto,q_auto,w_100,h_100,c_fill/",
+                        ) || "";
+                      return (
+                        <li key={prod._id}>
+                          <Link
+                            to={`/product/${prod._id}`}
+                            onClick={() => setIsOpen(false)}
+                            className="flex items-center gap-3 p-3 hover:bg-cin-50 transition-colors group"
+                          >
+                            <div className="h-10 w-10 rounded-lg border border-cin-200 overflow-hidden shrink-0 bg-cin-100">
+                              {thumb && (
+                                <img
+                                  src={thumb}
+                                  alt={prod.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-cin-800 group-hover:text-cin-600 line-clamp-1">
+                                {prod.name}
+                              </p>
+                              <p className="text-xs text-cin-400">
+                                {prod.category?.name} ·{" "}
+                                <span className="font-medium text-cin-600">
+                                  {formatPrice(prod.prices?.cash)}
+                                </span>
+                              </p>
+                            </div>
+                            <FaChevronRight
+                              className="text-cin-300 shrink-0"
+                              size={10}
+                            />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                    <li className="p-2 bg-cin-50 text-center">
+                      <button
+                        onClick={handleShowAll}
+                        className="text-sm font-medium text-cin-600 hover:text-cin-800 w-full py-1.5"
+                      >
+                        Ver todos los resultados →
+                      </button>
+                    </li>
+                  </ul>
+                ) : (
+                  <div className="p-4 text-center text-cin-400 text-sm">
+                    Sin resultados para "{query}"
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
-          {isOpen && (
-            <div className="absolute top-full left-0 w-full bg-white border border-t-0 border-indigo-200 rounded-b-xl shadow-xl z-50 overflow-hidden">
-              {suggestions.length > 0 ? (
-                <ul className="divide-y divide-gray-100">
-                  {suggestions.map((prod) => {
-                    const thumb =
-                      prod.images?.[0]?.url?.replace(
-                        "/upload/",
-                        "/upload/f_auto,q_auto,w_100,h_100,c_fill/",
-                      ) || "https://via.placeholder.com/50";
-                    return (
-                      <li key={prod._id}>
-                        <Link
-                          to={`/product/${prod._id}`}
-                          onClick={() => setIsOpen(false)}
-                          className="flex items-center gap-4 p-3 hover:bg-gray-50 transition-colors group"
-                        >
-                          <div className="h-12 w-12 rounded border border-gray-200 overflow-hidden shrink-0">
-                            <img
-                              src={thumb}
-                              alt={prod.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="text-sm font-semibold text-gray-700 group-hover:text-indigo-600 line-clamp-1">
-                              {prod.name}
-                            </h4>
-                            <p className="text-xs text-gray-400">
-                              {prod.category?.name} •{" "}
-                              <span className="font-medium text-green-600">
-                                {formatPrice(prod.prices.cash)}
-                              </span>
-                            </p>
-                          </div>
-                          <FaChevronRight className="text-gray-300 text-xs" />
-                        </Link>
-                      </li>
-                    );
-                  })}
-                  <li className="p-2 bg-gray-50 text-center">
-                    <button
-                      onClick={handleShowAllResults}
-                      className="text-sm font-bold text-indigo-600 hover:text-indigo-800 w-full py-2 flex items-center justify-center gap-2"
-                    >
-                      Ver todos los resultados para "{query}"{" "}
-                      <FaChevronRight size={10} />
-                    </button>
-                  </li>
-                </ul>
-              ) : (
-                <div className="p-4 text-center text-gray-500 text-sm">
-                  No encontramos productos con ese nombre.
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ICONOS DERECHA */}
-        <div className="flex items-center gap-4">
-          {/* Admin → panel */}
-          {isAdmin && (
-            <Link
-              to="/admin/dashboard"
-              className="text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1 font-medium text-sm"
-              title="Panel Admin"
+          <div className="flex items-center gap-3">
+            <button
+              className="md:hidden text-cin-600 hover:text-cin-800 p-1"
+              onClick={() => setSearchOpen(!searchOpen)}
             >
-              <FaTachometerAlt size={20} />
-              <span className="hidden lg:inline">Panel</span>
-            </Link>
-          )}
+              <FaSearch size={18} />
+            </button>
 
-          {/* Cliente logueado → menú desplegable */}
-          {isCustomer && (
-            <div ref={userMenuRef} className="relative">
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition-colors"
+            {isAdmin && (
+              <Link
+                to="/admin/dashboard"
+                className="text-cin-600 hover:text-cin-800 transition-colors flex items-center gap-1 text-sm font-medium"
               >
-                <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                  <FaUser size={14} className="text-indigo-600" />
-                </div>
-                <span className="hidden lg:inline text-sm font-medium">
-                  {user?.name?.split(" ")[0]}
-                </span>
-                <FaChevronDown
-                  size={10}
-                  className={`transition-transform ${userMenuOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {userMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
-                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
-                    <p className="text-xs font-bold text-gray-700">
-                      {user?.name}
-                    </p>
-                    <p className="text-xs text-gray-400 truncate">
-                      {user?.email}
-                    </p>
-                  </div>
-                  <Link
-                    to="/mis-pedidos"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-indigo-600 transition-colors"
-                  >
-                    <FaClipboardList size={14} /> Mis pedidos
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors"
-                  >
-                    <FaSignOutAlt size={14} /> Cerrar sesión
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* No logueado → ícono login */}
-          {!isAuthenticated && (
-            <Link
-              to="/login"
-              className="text-gray-400 hover:text-indigo-600 transition-colors"
-              title="Iniciar sesión"
-            >
-              <FaUserLock size={20} />
-            </Link>
-          )}
-
-          {/* Carrito */}
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="relative group text-gray-600 hover:text-indigo-600 transition-colors"
-          >
-            <FaShoppingCart size={24} />
-            {itemsCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full border-2 border-white">
-                {itemsCount}
-              </span>
+                <FaTachometerAlt size={18} />
+                <span className="hidden lg:inline">Panel</span>
+              </Link>
             )}
-          </button>
+
+            {isCustomer && (
+              <div ref={userMenuRef} className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-1.5 text-cin-600 hover:text-cin-800 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-cin-200 rounded-full flex items-center justify-center">
+                    <FaUser size={12} className="text-cin-700" />
+                  </div>
+                  <FaChevronDown
+                    size={10}
+                    className={`transition-transform text-cin-400 ${userMenuOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-cin-200 overflow-hidden z-50">
+                    <div className="px-4 py-3 bg-cin-50 border-b border-cin-100">
+                      <p className="text-xs font-medium text-cin-800">
+                        {user?.name}
+                      </p>
+                      <p className="text-xs text-cin-400 truncate">
+                        {user?.email}
+                      </p>
+                    </div>
+                    <Link
+                      to="/mis-pedidos"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 text-sm text-cin-700 hover:bg-cin-50 transition-colors"
+                    >
+                      <FaClipboardList size={13} /> Mis pedidos
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <FaSignOutAlt size={13} /> Cerrar sesión
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!isAuthenticated && (
+              <Link
+                to="/login"
+                className="text-cin-400 hover:text-cin-700 transition-colors"
+                title="Iniciar sesión"
+              >
+                <FaUserLock size={18} />
+              </Link>
+            )}
+
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative text-cin-600 hover:text-cin-800 transition-colors p-1"
+            >
+              <FaShoppingBag size={22} />
+              {itemsCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-cin-600 text-white text-[9px] font-bold h-4 w-4 flex items-center justify-center rounded-full border-2 border-cin-50">
+                  {itemsCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
-    </nav>
+
+        {searchOpen && (
+          <div className="md:hidden border-t border-cin-200 px-4 py-3 bg-cin-50">
+            <div className="relative">
+              <FaSearch
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-cin-400"
+                size={13}
+              />
+              <input
+                autoFocus
+                type="text"
+                placeholder="Buscar productos..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleShowAll()}
+                className="w-full pl-9 pr-4 py-2.5 bg-white border border-cin-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cin-300"
+              />
+            </div>
+          </div>
+        )}
+      </nav>
+    </>
   );
 };
 

@@ -19,18 +19,16 @@ import {
   FaUser,
   FaEnvelope,
   FaPhone,
+  FaShoppingBag,
 } from "react-icons/fa";
-import { SiMercadopago } from "react-icons/si";
 
 const Checkout = () => {
   const { cartItems, totalAmount, clearCart } = useCart();
   const { user, isAuthenticated, isTucuman } = useAuth();
   const navigate = useNavigate();
 
-  // ─── Paso actual del checkout ──────────────────────────────────────────
-  const [step, setStep] = useState(1); // 1: Contacto, 2: Entrega, 3: Pago
+  const [step, setStep] = useState(1);
 
-  // ─── Datos del formulario ──────────────────────────────────────────────
   const [contactInfo, setContactInfo] = useState({
     name: user?.name || "",
     email: user?.email || "",
@@ -38,7 +36,7 @@ const Checkout = () => {
   });
 
   const [delivery, setDelivery] = useState({
-    method: "retiro", // 'retiro' | 'envio'
+    method: "retiro",
     street: "",
     city: "San Miguel de Tucumán",
     province: "Tucumán",
@@ -47,29 +45,27 @@ const Checkout = () => {
   });
 
   const [payment, setPayment] = useState({
-    method: "mercadopago", // 'mercadopago' | 'efectivo' | 'transferencia'
+    method: "mercadopago",
     selectedFinancingPlan: null,
   });
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Si el carrito está vacío, redirigir
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen bg-cin-50 flex flex-col">
         <Navbar />
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-          <span className="text-6xl mb-4">🛒</span>
-          <h2 className="text-2xl font-bold text-gray-700 mb-2">
+          <FaShoppingBag className="text-cin-300 mb-4" size={48} />
+          <h2 className="font-display text-2xl text-cin-700 mb-2">
             Tu carrito está vacío
           </h2>
-          <p className="text-gray-500 mb-6">
+          <p className="text-cin-400 mb-6 text-sm">
             Agregá productos antes de continuar.
           </p>
           <Link
             to="/"
-            className="bg-indigo-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-indigo-700 transition-colors"
+            className="bg-cin-700 text-white font-medium px-6 py-3 rounded-xl hover:bg-cin-800 transition-colors text-sm"
           >
             Ver productos
           </Link>
@@ -78,26 +74,23 @@ const Checkout = () => {
     );
   }
 
-  // ─── Validaciones por paso ────────────────────────────────────────────
   const validateStep1 = () => {
     const e = {};
-    if (!contactInfo.name.trim()) e.name = "El nombre es obligatorio";
-    if (!contactInfo.email.trim()) e.email = "El email es obligatorio";
-    if (!contactInfo.phone.trim()) e.phone = "El teléfono es obligatorio";
+    if (!contactInfo.name.trim()) e.name = "Obligatorio";
+    if (!contactInfo.email.trim()) e.email = "Obligatorio";
+    if (!contactInfo.phone.trim()) e.phone = "Obligatorio";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const validateStep2 = () => {
     const e = {};
-    if (delivery.method === "envio" && !delivery.street.trim()) {
-      e.street = "La dirección es obligatoria para envío a domicilio";
-    }
+    if (delivery.method === "envio" && !delivery.street.trim())
+      e.street = "La dirección es obligatoria";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  // ─── Avanzar pasos ────────────────────────────────────────────────────
   const nextStep = () => {
     if (step === 1 && !validateStep1()) return;
     if (step === 2 && !validateStep2()) return;
@@ -105,17 +98,13 @@ const Checkout = () => {
     window.scrollTo(0, 0);
   };
 
-  // ─── Obtener planes de financiación disponibles ───────────────────────
-  // Solo se muestran si: método de pago = efectivo Y el cliente es de Tucumán
   const showFinancing =
     payment.method === "efectivo" &&
     (isTucuman || delivery.city?.toLowerCase().includes("san miguel"));
 
-  // ─── Enviar orden ─────────────────────────────────────────────────────
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Construir payload
       const orderPayload = {
         customerInfo: contactInfo,
         items: cartItems.map((item) => ({
@@ -137,51 +126,49 @@ const Checkout = () => {
         selectedFinancingPlan: payment.selectedFinancingPlan || {},
       };
 
-      // 1. Crear la orden en el backend
       const { data: order } = await axiosClient.post("/orders", orderPayload);
 
-      // 2. Si eligió Mercado Pago → crear preferencia y redirigir
       if (payment.method === "mercadopago") {
         const { data: preference } = await axiosClient.post(
           `/payments/create-preference/${order._id}`,
         );
         clearCart();
-        // En desarrollo usamos sandboxUrl, en producción initPoint
-        const mpUrl = import.meta.env.DEV
+        window.location.href = import.meta.env.DEV
           ? preference.sandboxUrl
           : preference.initPoint;
-        window.location.href = mpUrl;
         return;
       }
 
-      // 3. Si eligió efectivo o transferencia → ir a confirmación
       clearCart();
       navigate(`/orden/exito/${order._id}`);
     } catch (error) {
-      console.error(error);
-      const msg =
-        error.response?.data?.message || "Error al procesar el pedido";
-      toast.error(msg);
+      toast.error(
+        error.response?.data?.message || "Error al procesar el pedido",
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ─── UI ───────────────────────────────────────────────────────────────
+  const inputClass = (field) =>
+    `w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-cin-300 bg-white text-sm text-cin-800 placeholder-cin-300 transition-all ${errors[field] ? "border-red-300" : "border-cin-200"}`;
+
+  const inputWithIcon = (field) =>
+    `w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-cin-300 bg-white text-sm text-cin-800 placeholder-cin-300 transition-all ${errors[field] ? "border-red-300" : "border-cin-200"}`;
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-cin-50 flex flex-col">
       <Navbar />
 
       <div className="container mx-auto px-4 py-8 max-w-5xl">
-        {/* Volver */}
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-gray-500 hover:text-indigo-600 mb-6 text-sm font-medium transition-colors"
+          className="inline-flex items-center gap-2 text-cin-500 hover:text-cin-700 mb-6 text-sm font-medium transition-colors"
         >
-          <FaArrowLeft size={12} /> Seguir comprando
+          <FaArrowLeft size={11} /> Seguir comprando
         </Link>
 
-        {/* Indicador de pasos */}
+        {/* Stepper */}
         <div className="flex items-center gap-2 mb-8">
           {[
             { n: 1, label: "Contacto" },
@@ -191,49 +178,48 @@ const Checkout = () => {
             <React.Fragment key={s.n}>
               <div className="flex items-center gap-2">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step >= s.n ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-500"}`}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${step >= s.n ? "bg-cin-700 text-white" : "bg-cin-200 text-cin-500"}`}
                 >
-                  {step > s.n ? <FaCheckCircle size={16} /> : s.n}
+                  {step > s.n ? <FaCheckCircle size={14} /> : s.n}
                 </div>
                 <span
-                  className={`text-sm font-medium hidden sm:inline ${step >= s.n ? "text-indigo-600" : "text-gray-400"}`}
+                  className={`text-sm hidden sm:inline ${step >= s.n ? "text-cin-700 font-medium" : "text-cin-400"}`}
                 >
                   {s.label}
                 </span>
               </div>
               {i < 2 && (
                 <div
-                  className={`flex-1 h-0.5 transition-colors ${step > s.n ? "bg-indigo-600" : "bg-gray-200"}`}
+                  className={`flex-1 h-0.5 transition-colors ${step > s.n ? "bg-cin-600" : "bg-cin-200"}`}
                 />
               )}
             </React.Fragment>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* ── Formulario ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Formulario */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
-              {/* PASO 1: Datos de contacto */}
+            <div className="bg-white rounded-2xl border border-cin-200 p-6 md:p-8">
+              {/* PASO 1 */}
               {step === 1 && (
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                    <FaUser className="text-indigo-500" /> Datos de contacto
+                  <h2 className="font-display text-xl text-cin-800 mb-6 flex items-center gap-2">
+                    <FaUser className="text-cin-400" size={16} /> Tus datos
                   </h2>
-
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                      <label className="block text-xs font-medium text-cin-500 uppercase tracking-wide mb-2">
                         Nombre completo *
                       </label>
                       <div className="relative">
                         <FaUser
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                          size={14}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-cin-300"
+                          size={13}
                         />
                         <input
                           type="text"
-                          placeholder="Juan García"
+                          placeholder="Tu nombre"
                           value={contactInfo.name}
                           onChange={(e) =>
                             setContactInfo({
@@ -241,7 +227,7 @@ const Checkout = () => {
                               name: e.target.value,
                             })
                           }
-                          className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 text-sm ${errors.name ? "border-red-400 bg-red-50" : "border-gray-200"}`}
+                          className={inputWithIcon("name")}
                         />
                       </div>
                       {errors.name && (
@@ -250,15 +236,14 @@ const Checkout = () => {
                         </p>
                       )}
                     </div>
-
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                      <label className="block text-xs font-medium text-cin-500 uppercase tracking-wide mb-2">
                         Email *
                       </label>
                       <div className="relative">
                         <FaEnvelope
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                          size={14}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-cin-300"
+                          size={13}
                         />
                         <input
                           type="email"
@@ -270,7 +255,7 @@ const Checkout = () => {
                               email: e.target.value,
                             })
                           }
-                          className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 text-sm ${errors.email ? "border-red-400 bg-red-50" : "border-gray-200"}`}
+                          className={inputWithIcon("email")}
                         />
                       </div>
                       {errors.email && (
@@ -279,15 +264,14 @@ const Checkout = () => {
                         </p>
                       )}
                     </div>
-
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                      <label className="block text-xs font-medium text-cin-500 uppercase tracking-wide mb-2">
                         Teléfono / WhatsApp *
                       </label>
                       <div className="relative">
                         <FaPhone
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                          size={14}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-cin-300"
+                          size={13}
                         />
                         <input
                           type="tel"
@@ -299,7 +283,7 @@ const Checkout = () => {
                               phone: e.target.value,
                             })
                           }
-                          className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 text-sm ${errors.phone ? "border-red-400 bg-red-50" : "border-gray-200"}`}
+                          className={inputWithIcon("phone")}
                         />
                       </div>
                       {errors.phone && (
@@ -312,67 +296,60 @@ const Checkout = () => {
                 </div>
               )}
 
-              {/* PASO 2: Método de entrega */}
+              {/* PASO 2 */}
               {step === 2 && (
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                    <FaMapMarkerAlt className="text-indigo-500" /> Método de
-                    entrega
+                  <h2 className="font-display text-xl text-cin-800 mb-6 flex items-center gap-2">
+                    <FaMapMarkerAlt className="text-cin-400" size={16} /> Método
+                    de entrega
                   </h2>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                    {/* Retiro en local */}
-                    <button
-                      onClick={() =>
-                        setDelivery({ ...delivery, method: "retiro" })
-                      }
-                      className={`p-5 rounded-xl border-2 text-left transition-all ${delivery.method === "retiro" ? "border-indigo-600 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}
-                    >
-                      <FaStore
-                        className={`text-2xl mb-3 ${delivery.method === "retiro" ? "text-indigo-600" : "text-gray-400"}`}
-                      />
-                      <h3 className="font-bold text-gray-800">
-                        Retiro en local
-                      </h3>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Silvano Bores 850, SMT
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Lun a Sáb 8:30 a 13:00
-                      </p>
-                    </button>
-
-                    {/* Envío a domicilio */}
-                    <button
-                      onClick={() =>
-                        setDelivery({ ...delivery, method: "envio" })
-                      }
-                      className={`p-5 rounded-xl border-2 text-left transition-all ${delivery.method === "envio" ? "border-indigo-600 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}
-                    >
-                      <FaMapMarkerAlt
-                        className={`text-2xl mb-3 ${delivery.method === "envio" ? "text-indigo-600" : "text-gray-400"}`}
-                      />
-                      <h3 className="font-bold text-gray-800">
-                        Envío a domicilio
-                      </h3>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Coordinamos el envío
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Te contactamos para coordinar
-                      </p>
-                    </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                    {[
+                      {
+                        key: "retiro",
+                        icon: <FaStore size={20} />,
+                        title: "Retiro en local",
+                        sub1: "San Miguel de Tucumán",
+                        sub2: "Lun a Sáb 9:00 a 18:00",
+                      },
+                      {
+                        key: "envio",
+                        icon: <FaMapMarkerAlt size={20} />,
+                        title: "Envío a domicilio",
+                        sub1: "Coordinamos el envío",
+                        sub2: "Te contactamos para coordinar",
+                      },
+                    ].map((opt) => (
+                      <button
+                        key={opt.key}
+                        onClick={() =>
+                          setDelivery({ ...delivery, method: opt.key })
+                        }
+                        className={`p-5 rounded-xl border-2 text-left transition-all ${delivery.method === opt.key ? "border-cin-600 bg-cin-50" : "border-cin-200 hover:border-cin-300"}`}
+                      >
+                        <div
+                          className={`mb-2 ${delivery.method === opt.key ? "text-cin-600" : "text-cin-300"}`}
+                        >
+                          {opt.icon}
+                        </div>
+                        <h3 className="font-medium text-cin-800 text-sm">
+                          {opt.title}
+                        </h3>
+                        <p className="text-xs text-cin-500 mt-0.5">
+                          {opt.sub1}
+                        </p>
+                        <p className="text-xs text-cin-400">{opt.sub2}</p>
+                      </button>
+                    ))}
                   </div>
 
-                  {/* Formulario de dirección (solo si eligió envío) */}
                   {delivery.method === "envio" && (
-                    <div className="space-y-4 border-t border-gray-100 pt-6">
-                      <h3 className="font-bold text-gray-700 text-sm">
+                    <div className="space-y-4 border-t border-cin-100 pt-5">
+                      <h3 className="text-sm font-medium text-cin-700">
                         Dirección de envío
                       </h3>
-
                       <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                        <label className="block text-xs font-medium text-cin-500 uppercase tracking-wide mb-2">
                           Calle y número *
                         </label>
                         <input
@@ -382,7 +359,7 @@ const Checkout = () => {
                           onChange={(e) =>
                             setDelivery({ ...delivery, street: e.target.value })
                           }
-                          className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 text-sm ${errors.street ? "border-red-400 bg-red-50" : "border-gray-200"}`}
+                          className={inputClass("street")}
                         />
                         {errors.street && (
                           <p className="text-red-500 text-xs mt-1">
@@ -390,10 +367,9 @@ const Checkout = () => {
                           </p>
                         )}
                       </div>
-
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                          <label className="block text-xs font-medium text-cin-500 uppercase tracking-wide mb-2">
                             Ciudad
                           </label>
                           <input
@@ -402,11 +378,11 @@ const Checkout = () => {
                             onChange={(e) =>
                               setDelivery({ ...delivery, city: e.target.value })
                             }
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 text-sm"
+                            className={inputClass("")}
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                          <label className="block text-xs font-medium text-cin-500 uppercase tracking-wide mb-2">
                             Código postal
                           </label>
                           <input
@@ -416,23 +392,22 @@ const Checkout = () => {
                             onChange={(e) =>
                               setDelivery({ ...delivery, zip: e.target.value })
                             }
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 text-sm"
+                            className={inputClass("")}
                           />
                         </div>
                       </div>
-
                       <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
-                          Indicaciones adicionales
+                        <label className="block text-xs font-medium text-cin-500 uppercase tracking-wide mb-2">
+                          Indicaciones
                         </label>
                         <input
                           type="text"
-                          placeholder="Piso, departamento, referencia..."
+                          placeholder="Piso, depto, referencia..."
                           value={delivery.notes}
                           onChange={(e) =>
                             setDelivery({ ...delivery, notes: e.target.value })
                           }
-                          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 text-sm"
+                          className={inputClass("")}
                         />
                       </div>
                     </div>
@@ -440,172 +415,115 @@ const Checkout = () => {
                 </div>
               )}
 
-              {/* PASO 3: Método de pago */}
+              {/* PASO 3 */}
               {step === 3 && (
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                    <FaCreditCard className="text-indigo-500" /> Método de pago
+                  <h2 className="font-display text-xl text-cin-800 mb-6 flex items-center gap-2">
+                    <FaCreditCard className="text-cin-400" size={16} /> Método
+                    de pago
                   </h2>
-
-                  <div className="space-y-3 mb-6">
-                    {/* Mercado Pago */}
-                    <button
-                      onClick={() =>
-                        setPayment({
-                          method: "mercadopago",
-                          selectedFinancingPlan: null,
-                        })
-                      }
-                      className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 ${payment.method === "mercadopago" ? "border-indigo-600 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}
-                    >
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${payment.method === "mercadopago" ? "bg-indigo-600" : "bg-gray-100"}`}
+                  <div className="space-y-3 mb-5">
+                    {[
+                      {
+                        key: "mercadopago",
+                        icon: <FaCreditCard size={18} />,
+                        title: "Mercado Pago",
+                        sub: "Tarjeta de crédito, débito, transferencia",
+                      },
+                      {
+                        key: "efectivo",
+                        icon: <FaMoneyBillWave size={18} />,
+                        title: "Efectivo",
+                        sub: "Pagás al retirar o al recibir",
+                      },
+                      {
+                        key: "transferencia",
+                        icon: <FaExchangeAlt size={18} />,
+                        title: "Transferencia bancaria",
+                        sub: "Te enviamos el CBU por email",
+                      },
+                    ].map((opt) => (
+                      <button
+                        key={opt.key}
+                        onClick={() =>
+                          setPayment({
+                            method: opt.key,
+                            selectedFinancingPlan: null,
+                          })
+                        }
+                        className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 ${payment.method === opt.key ? "border-cin-600 bg-cin-50" : "border-cin-200 hover:border-cin-300"}`}
                       >
-                        <FaCreditCard
-                          className={
-                            payment.method === "mercadopago"
-                              ? "text-white"
-                              : "text-gray-400"
-                          }
-                          size={18}
-                        />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-800">
-                          Mercado Pago
-                        </h3>
-                        <p className="text-xs text-gray-500">
-                          Tarjeta de crédito, débito, transferencia
-                        </p>
-                      </div>
-                    </button>
-
-                    {/* Efectivo */}
-                    <button
-                      onClick={() =>
-                        setPayment({
-                          method: "efectivo",
-                          selectedFinancingPlan: null,
-                        })
-                      }
-                      className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 ${payment.method === "efectivo" ? "border-indigo-600 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}
-                    >
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${payment.method === "efectivo" ? "bg-indigo-600" : "bg-gray-100"}`}
-                      >
-                        <FaMoneyBillWave
-                          className={
-                            payment.method === "efectivo"
-                              ? "text-white"
-                              : "text-gray-400"
-                          }
-                          size={18}
-                        />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-800">Efectivo</h3>
-                        <p className="text-xs text-gray-500">
-                          Pagás al retirar o al momento de entrega
-                        </p>
-                      </div>
-                    </button>
-
-                    {/* Transferencia */}
-                    <button
-                      onClick={() =>
-                        setPayment({
-                          method: "transferencia",
-                          selectedFinancingPlan: null,
-                        })
-                      }
-                      className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 ${payment.method === "transferencia" ? "border-indigo-600 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}
-                    >
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${payment.method === "transferencia" ? "bg-indigo-600" : "bg-gray-100"}`}
-                      >
-                        <FaExchangeAlt
-                          className={
-                            payment.method === "transferencia"
-                              ? "text-white"
-                              : "text-gray-400"
-                          }
-                          size={18}
-                        />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-800">
-                          Transferencia bancaria
-                        </h3>
-                        <p className="text-xs text-gray-500">
-                          Te enviamos el CBU por email
-                        </p>
-                      </div>
-                    </button>
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${payment.method === opt.key ? "bg-cin-700 text-white" : "bg-cin-100 text-cin-400"}`}
+                        >
+                          {opt.icon}
+                        </div>
+                        <div>
+                          <p className="font-medium text-cin-800 text-sm">
+                            {opt.title}
+                          </p>
+                          <p className="text-xs text-cin-500">{opt.sub}</p>
+                        </div>
+                      </button>
+                    ))}
                   </div>
 
-                  {/* Financiación (solo Tucumán + efectivo) */}
                   {showFinancing && (
-                    <div className="border-t border-gray-100 pt-6">
-                      <h3 className="font-bold text-gray-700 mb-1">
+                    <div className="border-t border-cin-100 pt-5">
+                      <h3 className="text-sm font-medium text-cin-700 mb-1">
                         Financiación en cuotas
                       </h3>
-                      <p className="text-xs text-gray-400 mb-4">
-                        Disponible para clientes de San Miguel de Tucumán
+                      <p className="text-xs text-cin-400 mb-3">
+                        Disponible para San Miguel de Tucumán
                       </p>
-                      <div className="space-y-2">
-                        {/* Sin cuotas */}
-                        <button
-                          onClick={() =>
-                            setPayment({
-                              ...payment,
-                              selectedFinancingPlan: null,
-                            })
-                          }
-                          className={`w-full p-3 rounded-xl border-2 text-left transition-all flex justify-between items-center ${!payment.selectedFinancingPlan ? "border-indigo-600 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}
-                        >
-                          <span className="font-medium text-gray-700 text-sm">
-                            Pago en efectivo (sin cuotas)
-                          </span>
-                          <span className="font-bold text-indigo-600">
-                            {formatPrice(totalAmount)}
-                          </span>
-                        </button>
-                      </div>
+                      <button
+                        onClick={() =>
+                          setPayment({
+                            ...payment,
+                            selectedFinancingPlan: null,
+                          })
+                        }
+                        className={`w-full p-3 rounded-xl border-2 flex justify-between items-center text-sm transition-all ${!payment.selectedFinancingPlan ? "border-cin-600 bg-cin-50" : "border-cin-200 hover:border-cin-300"}`}
+                      >
+                        <span className="font-medium text-cin-700">
+                          Pago en efectivo (sin cuotas)
+                        </span>
+                        <span className="font-display font-semibold text-cin-600">
+                          {formatPrice(totalAmount)}
+                        </span>
+                      </button>
                     </div>
                   )}
 
-                  {/* Nota WhatsApp */}
-                  <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200 flex items-start gap-3">
+                  <div className="mt-5 p-4 bg-green-50 rounded-xl border border-green-200 flex items-start gap-3">
                     <FaWhatsapp
                       className="text-green-500 mt-0.5 shrink-0"
-                      size={18}
+                      size={16}
                     />
                     <p className="text-xs text-green-700">
                       Una vez confirmado el pedido, nos comunicaremos por
-                      WhatsApp al número que ingresaste para coordinar los
-                      detalles.
+                      WhatsApp para coordinar los detalles.
                     </p>
                   </div>
                 </div>
               )}
 
-              {/* Navegación entre pasos */}
-              <div className="flex justify-between mt-8 pt-6 border-t border-gray-100">
+              {/* Navegación */}
+              <div className="flex justify-between mt-8 pt-6 border-t border-cin-100">
                 {step > 1 ? (
                   <button
                     onClick={() => setStep(step - 1)}
-                    className="flex items-center gap-2 text-gray-500 hover:text-gray-700 font-medium text-sm transition-colors"
+                    className="flex items-center gap-2 text-cin-500 hover:text-cin-700 font-medium text-sm transition-colors"
                   >
-                    <FaArrowLeft size={12} /> Anterior
+                    <FaArrowLeft size={11} /> Anterior
                   </button>
                 ) : (
                   <div />
                 )}
-
                 {step < 3 ? (
                   <button
                     onClick={nextStep}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3 rounded-xl transition-colors shadow-sm"
+                    className="bg-cin-700 hover:bg-cin-800 text-white font-medium px-8 py-3 rounded-xl transition-colors text-sm"
                   >
                     Continuar →
                   </button>
@@ -613,11 +531,11 @@ const Checkout = () => {
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold px-8 py-3 rounded-xl transition-colors shadow-sm flex items-center gap-2"
+                    className="bg-cin-700 hover:bg-cin-800 disabled:opacity-60 text-white font-medium px-8 py-3 rounded-xl transition-colors flex items-center gap-2 text-sm"
                   >
                     {isSubmitting ? (
                       <>
-                        <FaSpinner className="animate-spin" size={16} />{" "}
+                        <FaSpinner className="animate-spin" size={14} />{" "}
                         Procesando...
                       </>
                     ) : payment.method === "mercadopago" ? (
@@ -631,45 +549,43 @@ const Checkout = () => {
             </div>
           </div>
 
-          {/* ── Resumen del pedido ── */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
-              <h3 className="font-bold text-gray-800 mb-4">
-                Resumen del pedido
-              </h3>
-
+          {/* Resumen */}
+          <div>
+            <div className="bg-white rounded-2xl border border-cin-200 p-5 sticky top-24">
+              <h3 className="font-display text-cin-800 mb-4">Resumen</h3>
               <div className="space-y-3 mb-4">
                 {cartItems.map((item) => (
                   <div key={item._id} className="flex gap-3 items-center">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 shrink-0">
-                      <img
-                        src={item.images?.[0]?.url || "/placeholder.jpg"}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="w-11 h-11 rounded-lg overflow-hidden border border-cin-100 bg-cin-50 shrink-0">
+                      {item.images?.[0]?.url && (
+                        <img
+                          src={item.images[0].url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-700 line-clamp-1">
+                      <p className="text-xs font-medium text-cin-700 line-clamp-1">
                         {item.name}
                       </p>
-                      <p className="text-xs text-gray-400">x{item.qty}</p>
+                      <p className="text-xs text-cin-400">x{item.qty}</p>
                     </div>
-                    <span className="text-sm font-bold text-gray-700 shrink-0">
+                    <span className="text-xs font-medium text-cin-700 shrink-0">
                       {formatPrice(item.prices.cash * item.qty)}
                     </span>
                   </div>
                 ))}
               </div>
-
-              <div className="border-t border-gray-100 pt-4">
+              <div className="border-t border-cin-100 pt-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 font-medium">Total</span>
-                  <span className="text-xl font-black text-indigo-600">
+                  <span className="text-cin-600 text-sm">Total</span>
+                  <span className="font-display text-xl text-cin-700 font-semibold">
                     {formatPrice(totalAmount)}
                   </span>
                 </div>
                 {delivery.method === "envio" && (
-                  <p className="text-xs text-gray-400 mt-2">
+                  <p className="text-xs text-cin-400 mt-1">
                     * Costo de envío a coordinar
                   </p>
                 )}

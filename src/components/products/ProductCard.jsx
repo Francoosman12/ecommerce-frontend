@@ -1,104 +1,116 @@
 import React from "react";
 import { formatPrice } from "../../utils/formatPrice";
 import { Link } from "react-router-dom";
+import { useCart } from "../../context/CartContext";
+import { FaShoppingBag } from "react-icons/fa";
 
 const ProductCard = ({ product }) => {
-  // Optimización de imágenes Cloudinary
-  let imageUrl =
-    product.images?.[0]?.url ||
-    "https://via.placeholder.com/300x200?text=Sin+Imagen";
+  const { addToCart } = useCart();
 
-  if (imageUrl && imageUrl.includes("cloudinary.com")) {
+  let imageUrl = product.images?.[0]?.url || null;
+  if (imageUrl?.includes("cloudinary.com")) {
     imageUrl = imageUrl.replace("/upload/", "/upload/f_auto,q_auto,w_400/");
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col h-full border border-gray-100">
-      {/* 🖼️ ZONA IMAGEN */}
-      <div className="h-48 overflow-hidden relative group">
-        <img
-          src={imageUrl}
-          loading="lazy"
-          alt={product.name}
-          className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
-        />
-
-        {/* Etiqueta de Destacado (Reemplaza al % OFF) */}
-        {product.isFeatured && (
-          <div className="absolute top-2 right-2 bg-yellow-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm tracking-wide">
-            DESTACADO
+    <div className="bg-white rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full border border-cin-100 group">
+      {/* IMAGEN */}
+      <div className="relative h-52 overflow-hidden bg-cin-100">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            loading="lazy"
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <svg width="64" height="64" viewBox="0 0 100 100" opacity="0.3">
+              <g transform="translate(50,50)">
+                {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(
+                  (deg) => (
+                    <ellipse
+                      key={deg}
+                      cx="0"
+                      cy="-28"
+                      rx="9"
+                      ry="18"
+                      fill="#bd5845"
+                      transform={`rotate(${deg})`}
+                    />
+                  ),
+                )}
+                <circle cx="0" cy="0" r="12" fill="#D4A843" />
+              </g>
+            </svg>
           </div>
         )}
+
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          {product.isFeatured && (
+            <span className="bg-gold text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm">
+              Destacado
+            </span>
+          )}
+          {product.prices?.list > product.prices?.cash && (
+            <span className="bg-cin-600 text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm">
+              Oferta
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* 📝 ZONA INFO */}
+      {/* INFO */}
       <div className="p-4 flex-1 flex flex-col justify-between">
         <div>
-          <p className="text-gray-400 text-xs uppercase font-semibold tracking-wide">
-            {product.category?.name || "Muebles"}
+          <p className="text-cin-500 text-xs font-medium uppercase tracking-wide mb-1">
+            {product.category?.name || "Accesorios"}
           </p>
-          <h3 className="text-lg font-bold text-gray-800 mb-2 leading-tight line-clamp-2">
+          <h3 className="font-display text-base text-cin-900 leading-snug line-clamp-2 mb-3">
             {product.name}
           </h3>
         </div>
 
-        {/* 💲 ZONA PRECIOS */}
-        <div className="mt-4 space-y-1">
-          {/* 1. PRECIO LISTA TACHADO (Campo Nuevo 'list') */}
-          {/* Solo se muestra si es mayor al contado (evita errores visuales si es 0) */}
+        <div className="space-y-0.5">
           {product.prices?.list > product.prices?.cash && (
-            <div className="flex items-center space-x-2 text-xs text-gray-400">
-              <span>Lista:</span>
-              <span className="line-through decoration-red-300">
-                {formatPrice(product.prices.list)}
-              </span>
-            </div>
+            <p className="text-xs text-cin-400 line-through">
+              {formatPrice(product.prices.list)}
+            </p>
           )}
-
-          {/* 2. PRECIO CONTADO (Precio Base) */}
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600 text-sm font-medium">
-              Contado/Transferencia
-            </span>
-            <span className="text-2xl font-bold text-blue-600">
-              {formatPrice(product.prices?.cash)}
-            </span>
-          </div>
-
-          {/* 3. FINANCIACIÓN (Mejor Plan) */}
-          {product.prices?.financing?.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-dashed border-gray-200">
-              <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">
-                Financiación
-              </p>
-              {(() => {
-                // Buscamos el plan con MÁS cuotas para mostrar "Ahora 12..."
-                const maxPlan = product.prices.financing.reduce(
-                  (prev, current) =>
-                    prev.installments > current.installments ? prev : current
-                );
-                return (
-                  <div className="text-sm font-semibold text-gray-700">
-                    <span className="text-indigo-600">
-                      {maxPlan.installments} cuotas
-                    </span>{" "}
-                    de {formatPrice(maxPlan.installmentValue)}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
+          <p className="text-xl font-display font-semibold text-cin-700">
+            {formatPrice(product.prices?.cash)}
+          </p>
+          {product.prices?.financing?.length > 0 &&
+            (() => {
+              const maxPlan = product.prices.financing.reduce((prev, curr) =>
+                prev.installments > curr.installments ? prev : curr,
+              );
+              return (
+                <p className="text-xs text-cin-500">
+                  <span className="font-medium text-cin-600">
+                    {maxPlan.installments} cuotas
+                  </span>{" "}
+                  de {formatPrice(maxPlan.installmentValue)}
+                </p>
+              );
+            })()}
         </div>
       </div>
 
-      {/* 🛒 BOTÓN DE ACCIÓN */}
-      <div className="p-3 bg-gray-50 border-t border-gray-100">
+      {/* BOTONES */}
+      <div className="px-4 pb-4 flex gap-2">
         <Link
           to={`/product/${product._id}`}
-          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+          className="flex-1 border border-cin-300 text-cin-700 hover:bg-cin-100 font-medium py-2.5 rounded-xl transition-colors flex items-center justify-center text-sm"
         >
-          Ver Detalles
+          Ver detalle
         </Link>
+        <button
+          onClick={() => addToCart(product)}
+          className="flex-1 bg-cin-600 hover:bg-cin-700 text-white font-medium py-2.5 rounded-xl transition-colors flex items-center justify-center gap-1.5 text-sm"
+        >
+          <FaShoppingBag size={13} /> Agregar
+        </button>
       </div>
     </div>
   );
