@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import useSEO from "../../hooks/useSEO";
+import { trackViewProduct } from "../../hooks/useAnalytics";
+import { useProductSchema, useBreadcrumbSchema } from "../../hooks/useSchema";
 import axiosClient from "../../api/axiosClient";
 import { formatPrice } from "../../utils/formatPrice";
 import {
@@ -8,90 +11,177 @@ import {
   FaShieldAlt,
   FaTruck,
   FaPlay,
-  FaShoppingCart, // 👈 Importado para el botón
+  FaShoppingBag,
+  FaStar,
+  FaTag,
 } from "react-icons/fa";
 import Navbar from "../../components/layout/Navbar";
+import Footer from "../../components/layout/Footer";
 import { useCart } from "../../context/CartContext";
 
-// --- HELPER ROBUSTO PARA YOUTUBE ---
+// ─── Helpers de video ────────────────────────────────────────────────────
 const getYouTubeId = (url) => {
   if (!url) return null;
-  // Soporta: youtube.com, youtu.be, shorts, embed, m.youtube
   const regExp =
     /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/|watch\?.+&v=))([\w-]{11})(?:.+)?$/;
   const match = url.match(regExp);
-  return match && match[1] ? match[1] : null;
+  return match?.[1] || null;
 };
 
-// --- HELPER PARA TIKTOK ---
 const getTikTokId = (url) => {
   if (!url) return null;
-  // Busca el patrón /video/NUMEROS
-  const regExp = /\/video\/(\d+)/;
-  const match = url.match(regExp);
-  return match && match[1] ? match[1] : null;
+  const match = url.match(/\/video\/(\d+)/);
+  return match?.[1] || null;
+};
+
+// ─── Productos relacionados ──────────────────────────────────────────────
+const RelatedProducts = ({ categoryId, currentId }) => {
+  const [related, setRelated] = useState([]);
+
+  useEffect(() => {
+    if (!categoryId) return;
+    const fetchRelated = async () => {
+      try {
+        const { data } = await axiosClient.get("/products");
+        const filtered = data
+          .filter(
+            (p) =>
+              p.category?._id === categoryId &&
+              p._id !== currentId &&
+              p.isActive,
+          )
+          .slice(0, 4);
+        setRelated(filtered);
+      } catch {
+        /* silencioso */
+      }
+    };
+    fetchRelated();
+  }, [categoryId, currentId]);
+
+  if (related.length === 0) return null;
+
+  return (
+    <section className="container mx-auto px-4 py-10">
+      <h2 className="font-display text-2xl text-cin-800 mb-6">
+        También te puede interesar
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+        {related.map((p) => (
+          <Link
+            key={p._id}
+            to={`/product/${p._id}`}
+            onClick={() => window.scrollTo(0, 0)}
+            className="bg-white rounded-2xl overflow-hidden border border-cin-100 hover:shadow-lg transition-all duration-300 group flex flex-col"
+          >
+            <div className="h-44 overflow-hidden bg-cin-100">
+              {p.images?.[0]?.url ? (
+                <img
+                  src={p.images[0].url}
+                  alt={p.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              ) : (
+                <div className="w-full h-full bg-cin-100 flex items-center justify-center">
+                  <FaShoppingBag className="text-cin-300" size={28} />
+                </div>
+              )}
+            </div>
+            <div className="p-4 flex-1 flex flex-col justify-between">
+              <div>
+                <p className="text-cin-500 text-xs font-medium uppercase tracking-wide mb-1">
+                  {p.category?.name}
+                </p>
+                <h3 className="font-display text-sm text-cin-800 line-clamp-2 leading-snug">
+                  {p.name}
+                </h3>
+              </div>
+              <p className="font-display font-semibold text-cin-700 mt-3">
+                {formatPrice(p.prices?.cash)}
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
 };
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const { addToCart } = useCart(); // 👈 Hook del carrito
+  const { addToCart } = useCart();
 
-  // Estados de datos
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Estados de la Galería
+  // SEO dinámico — se actualiza cuando carga el producto
+  useSEO({
+    title: product
+      ? `${product.name} — Margarita Accesorios`
+      : "Margarita Accesorios",
+    description:
+      product?.description ||
+      "Bufandones artesanales y accesorios de moda femenina en Tucumán.",
+    image: product?.images?.[0]?.url || "/og-image.jpg",
+    url: typeof window !== "undefined" ? window.location.href : "",
+    type: "product",
+    price: product?.prices?.cash?.toString(),
+  });
+  useProductSchema(product);
+  useBreadcrumbSchema(
+    product
+      ? [
+          {
+            name: "Inicio",
+            url: typeof window !== "undefined" ? window.location.origin : "",
+          },
+          {
+            name: product.category?.name || "Accesorios",
+            url: typeof window !== "undefined" ? window.location.origin : "",
+          },
+          {
+            name: product.name,
+            url: typeof window !== "undefined" ? window.location.href : "",
+          },
+        ]
+      : null,
+  );
+  const [error, setError] = useState(null);
   const [mediaList, setMediaList] = useState([]);
   const [activeMedia, setActiveMedia] = useState(null);
 
   useEffect(() => {
-    const fetchOne = async () => {
+    const fetchProduct = async () => {
       try {
         setLoading(true);
-        // Si tienes el endpoint específico usa: axiosClient.get(`/products/${id}`)
-        // Usamos el filtro global por ahora:
-        const { data: allProducts } =
-          await axiosClient.get("/products?all=true");
-        const found = allProducts.find((p) => p._id === id);
+        // Usamos el endpoint específico por ID
+        const { data: found } = await axiosClient.get(`/products/${id}`);
 
         if (found) {
           setProduct(found);
 
-          // --- CONSTRUIR GALERÍA MIXTA ---
           const media = [];
 
-          // 1. Fotos
-          if (found.images && found.images.length > 0) {
-            found.images.forEach((img) => {
-              media.push({
-                type: "image",
-                url: img.url,
-                id: img._id || img.url,
-              });
-            });
-          }
+          // Fotos
+          found.images?.forEach((img) => {
+            media.push({ type: "image", url: img.url, id: img._id || img.url });
+          });
 
-          // 2. Agregar Video (YouTube o TikTok)
+          // Video
           if (found.videoUrl) {
             const ytId = getYouTubeId(found.videoUrl);
             const tkId = getTikTokId(found.videoUrl);
-
             if (ytId) {
-              // CASO YOUTUBE
               media.push({
-                type: "video_youtube", // Cambiamos nombre para diferenciar
+                type: "video_youtube",
                 url: `https://www.youtube.com/embed/${ytId}`,
                 thumbnail: `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`,
                 id: "video-item",
               });
             } else if (tkId) {
-              // CASO TIKTOK
               media.push({
                 type: "video_tiktok",
-                // URL oficial de embed de TikTok
                 url: `https://www.tiktok.com/embed/v2/${tkId}`,
-                // Usamos un logo de TikTok estático porque ellos no dan la foto gratis por URL
                 thumbnail:
                   "https://upload.wikimedia.org/wikipedia/en/a/a9/TikTok_logo.svg",
                 id: "video-item",
@@ -101,23 +191,23 @@ const ProductDetail = () => {
 
           setMediaList(media);
           if (media.length > 0) setActiveMedia(media[0]);
+          trackViewProduct(found);
         } else {
           setError("Producto no encontrado");
         }
-      } catch (err) {
-        console.error(err);
+      } catch {
         setError("Error al cargar el producto");
       } finally {
         setLoading(false);
       }
     };
-    fetchOne();
+    fetchProduct();
   }, [id]);
 
-  const handleWhatsAppBuy = () => {
+  const handleWhatsApp = () => {
     if (!product) return;
-    const phone = "5493816436214";
-    const message = `Hola Casa Bahia, consulta por: *${product.name}* (SKU: ${product.sku}).`;
+    const phone = "5493815225633";
+    const message = `Hola Margarita, quería consultar por: *${product.name}* (SKU: ${product.sku}).`;
     window.open(
       `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
       "_blank",
@@ -126,110 +216,118 @@ const ProductDetail = () => {
 
   if (loading)
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-cin-50 flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-cin-600 border-t-transparent" />
+        </div>
       </div>
     );
+
   if (error)
     return (
-      <div className="text-center p-20 text-red-600 font-bold">{error}</div>
+      <div className="min-h-screen bg-cin-50 flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-red-500 font-medium">{error}</p>
+        </div>
+      </div>
     );
 
+  const hasOffer = product.prices?.hasOffer;
+
   return (
-    <div className="bg-gray-50 min-h-screen font-sans">
+    <div className="min-h-screen bg-cin-50 flex flex-col font-sans">
       <Navbar />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 flex-1">
+        {/* Volver */}
         <Link
           to="/"
-          className="inline-flex items-center text-gray-500 hover:text-indigo-600 mb-6 font-medium text-sm transition-colors"
+          className="inline-flex items-center gap-2 text-cin-500 hover:text-cin-700 mb-6 text-sm font-medium transition-colors"
         >
-          <FaArrowLeft className="mr-2" /> Volver al catálogo
+          <FaArrowLeft size={11} /> Volver al catálogo
         </Link>
 
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-            {/* ========================================================= */}
-            {/* 🖼️ IZQUIERDA: GALERÍA MULTIMEDIA                         */}
-            {/* ========================================================= */}
-            <div className="lg:col-span-7 p-6 md:p-10 bg-white flex flex-col gap-6">
-              {/* Visor Grande */}
-              {/* 1. VISOR PRINCIPAL GRANDE */}
-              <div className="relative w-full aspect-square md:aspect-[4/3] bg-black rounded-2xl overflow-hidden shadow-sm flex items-center justify-center">
+        <div className="bg-white rounded-2xl border border-cin-200 overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-12">
+            {/* ── GALERÍA ── */}
+            <div className="lg:col-span-7 p-6 md:p-8 flex flex-col gap-4">
+              {/* Visor principal */}
+              <div className="relative w-full aspect-square md:aspect-[4/3] bg-cin-100 rounded-xl overflow-hidden flex items-center justify-center">
+                {/* Badge oferta */}
+                {hasOffer && (
+                  <div className="absolute top-3 left-3 z-10 bg-cin-600 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
+                    <FaTag size={10} />
+                    {Math.round(
+                      (1 - product.prices.cash / product.prices.base) * 100,
+                    )}
+                    % OFF
+                  </div>
+                )}
+
+                {/* Badge destacado */}
+                {product.isFeatured && (
+                  <div className="absolute top-3 right-3 z-10 bg-gold text-white text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
+                    <FaStar size={10} /> Destacado
+                  </div>
+                )}
+
                 {!activeMedia ? (
-                  <img
-                    src="https://via.placeholder.com/600?text=Sin+Imagen"
-                    alt="Placeholder"
-                    className="w-full h-full object-cover opacity-50"
-                  />
+                  <div className="w-full h-full bg-cin-100 flex items-center justify-center">
+                    <FaShoppingBag className="text-cin-300" size={48} />
+                  </div>
                 ) : activeMedia.type === "image" ? (
-                  // FOTO
                   <img
                     src={activeMedia.url}
                     alt={product.name}
-                    className="w-full h-full object-contain p-1 bg-white"
+                    className="w-full h-full object-contain p-2 bg-white"
                   />
                 ) : (
-                  // VIDEO (YouTube o TikTok)
                   <iframe
                     src={activeMedia.url}
-                    title="Video Producto"
+                    title="Video producto"
                     className="w-full h-full"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
-                  ></iframe>
+                  />
                 )}
               </div>
 
-              {/* Tira de Miniaturas */}
+              {/* Miniaturas */}
               {mediaList.length > 1 && (
-                <div className="flex gap-4 overflow-x-auto pb-2 px-1 justify-center md:justify-start">
+                <div className="flex gap-3 overflow-x-auto pb-1 justify-start">
                   {mediaList.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => setActiveMedia(item)}
-                      className={`
-                        relative group h-20 w-20 md:h-24 md:w-24 shrink-0 rounded-xl overflow-hidden border-2 transition-all duration-200
-                        ${
-                          activeMedia?.id === item.id
-                            ? "border-indigo-600 ring-2 ring-indigo-100 shadow-md scale-102"
-                            : "border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100"
-                        }
-                      `}
+                      className={`relative shrink-0 h-18 w-18 rounded-xl overflow-hidden border-2 transition-all duration-200 ${
+                        activeMedia?.id === item.id
+                          ? "border-cin-600 shadow-sm"
+                          : "border-cin-200 opacity-60 hover:opacity-100 hover:border-cin-300"
+                      }`}
+                      style={{ width: 72, height: 72 }}
                     >
-                      {/* ... dentro del .map del carrusel ... */}
                       <img
                         src={
                           item.type.includes("video")
                             ? item.thumbnail
                             : item.url
                         }
-                        alt="Vista Previa"
-                        className={`w-full h-full ${
-                          item.type === "video_tiktok"
-                            ? "object-contain p-2 bg-black"
-                            : "object-cover"
-                        }`}
-                        // 👇 AGREGA ESTO: Si falla la carga, pone una imagen gris por defecto
+                        alt=""
+                        className={`w-full h-full ${item.type === "video_tiktok" ? "object-contain p-1 bg-black" : "object-cover"}`}
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src =
-                            "https://via.placeholder.com/150/cccccc/000000?text=No+Img";
+                          e.target.src = "";
                         }}
                       />
-                      {/* Icono Overlay si es video (YouTube o TikTok) */}
-                      {(item.type === "video_youtube" ||
-                        item.type === "video_tiktok") && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/10 transition-colors">
+                      {item.type.includes("video") && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/10 transition-colors">
                           <div
-                            className={`text-white rounded-full p-2 shadow-lg ${
-                              item.type === "video_tiktok"
-                                ? "bg-black"
-                                : "bg-red-600"
-                            }`}
+                            className={`text-white rounded-full p-1.5 ${item.type === "video_tiktok" ? "bg-black" : "bg-red-600"}`}
                           >
-                            <FaPlay size={10} className="ml-0.5" />
+                            <FaPlay size={8} className="ml-0.5" />
                           </div>
                         </div>
                       )}
@@ -239,118 +337,142 @@ const ProductDetail = () => {
               )}
             </div>
 
-            {/* ========================================================= */}
-            {/* 📝 DERECHA: INFO Y BOTONES                               */}
-            {/* ========================================================= */}
-            <div className="lg:col-span-5 p-6 md:p-10 bg-gray-50/50 border-l border-gray-100 flex flex-col">
-              <div className="mb-6">
-                <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-3">
-                  {product.category?.name || "Muebles"}
+            {/* ── INFO ── */}
+            <div className="lg:col-span-5 p-6 md:p-8 bg-cin-50/50 border-t lg:border-t-0 lg:border-l border-cin-100 flex flex-col">
+              {/* Categoría + nombre */}
+              <div className="mb-5">
+                <span className="inline-block bg-cin-200 text-cin-700 text-xs font-medium px-3 py-1 rounded-full uppercase tracking-wide mb-3">
+                  {product.category?.name || "Accesorios"}
                 </span>
-                <h1 className="text-3xl font-extrabold text-gray-900 leading-tight mb-2">
+                <h1 className="font-display text-2xl md:text-3xl text-cin-900 leading-snug mb-2">
                   {product.name}
                 </h1>
-                <p className="text-gray-400 text-sm font-mono">
+                <p className="text-cin-400 text-xs font-mono">
                   SKU: {product.sku}
                 </p>
               </div>
 
-              {/* CARD DE PRECIOS ACTUALIZADA */}
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 mb-8">
-                <div className="mb-4 border-b border-gray-100 pb-4">
-                  {/* 1. PRECIO LISTA (TACHADO) - Solo si hay recargo */}
+              {/* Card de precios */}
+              <div className="bg-white rounded-xl border border-cin-200 p-5 mb-5">
+                {/* Precio */}
+                <div className="mb-4 pb-4 border-b border-cin-100">
                   {product.prices?.list > product.prices?.cash && (
-                    <p className="text-gray-400 text-base mb-1 font-medium flex items-center gap-2">
-                      Precio Lista:
-                      <span className="line-through decoration-red-400 text-gray-500">
+                    <p className="text-cin-400 text-sm mb-1 flex items-center gap-2">
+                      {hasOffer ? "Precio normal:" : "Precio lista:"}
+                      <span className="line-through text-cin-300">
                         {formatPrice(product.prices.list)}
                       </span>
                     </p>
                   )}
-
-                  {/* 2. PRECIO CONTADO (Destacado) */}
                   <div className="flex flex-col">
-                    <span className="text-4xl font-black text-gray-800">
+                    <span className="font-display text-4xl font-semibold text-cin-800">
                       {formatPrice(product.prices.cash)}
                     </span>
-                    <span className="text-green-600 font-bold text-sm bg-green-50 w-fit px-2 rounded mt-1">
-                      ✅ Precio Contado / Transferencia
+                    <span
+                      className={`text-xs font-medium w-fit px-2 py-0.5 rounded mt-1.5 ${
+                        hasOffer
+                          ? "bg-cin-100 text-cin-700"
+                          : "bg-green-50 text-green-700"
+                      }`}
+                    >
+                      {hasOffer
+                        ? "Precio de oferta"
+                        : "Precio contado / transferencia"}
                     </span>
                   </div>
                 </div>
 
-                {/* 3. FINANCIACIÓN */}
-                <div className="space-y-3 pt-2">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    Opciones de Financiación
-                  </p>
-
-                  {product.prices.financing?.length > 0 ? (
-                    product.prices.financing.map((plan, i) => (
+                {/* Financiación */}
+                {product.prices?.financing?.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-cin-400 uppercase tracking-widest mb-2">
+                      Financiación
+                    </p>
+                    {product.prices.financing.map((plan, i) => (
                       <div
                         key={i}
-                        className="flex justify-between items-center text-sm p-3 bg-gray-50 rounded-lg border border-gray-100 group hover:border-indigo-200 transition-colors"
+                        className="flex justify-between items-center text-sm p-3 bg-cin-50 rounded-lg border border-cin-100 hover:border-cin-300 transition-colors"
                       >
-                        <span className="font-semibold text-gray-700 group-hover:text-indigo-700 transition-colors">
+                        <span className="font-medium text-cin-700">
                           {plan.planName}
                         </span>
-                        <span className="text-indigo-600 font-bold text-base">
-                          {plan.installments} cuotas de{" "}
+                        <span className="font-display font-semibold text-cin-600">
+                          {plan.installments}x{" "}
                           {formatPrice(plan.installmentValue)}
                         </span>
                       </div>
-                    ))
-                  ) : (
-                    <div className="flex gap-2 items-center text-gray-400 italic text-sm p-2 bg-gray-50 rounded">
-                      <span>ℹ️</span> Consultar planes con tarjeta en el local.
-                    </div>
-                  )}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-cin-400 italic">
+                    Consultá planes de pago por WhatsApp.
+                  </p>
+                )}
               </div>
 
-              {/* ZONA DE BOTONES (CARRITO + WHATSAPP) */}
-              <div className="flex flex-col gap-3 mb-8">
-                {/* 1. AGREGAR AL CARRITO (Principal) */}
+              {/* Botones */}
+              <div className="flex flex-col gap-3 mb-6">
                 <button
                   onClick={() => addToCart(product)}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-3 text-lg"
+                  className="w-full bg-cin-700 hover:bg-cin-800 text-white font-medium py-4 rounded-xl transition-colors flex items-center justify-center gap-3 text-base shadow-sm"
                 >
-                  <FaShoppingCart size={22} />
-                  Agregar al Carrito
+                  <FaShoppingBag size={18} /> Agregar al carrito
                 </button>
-
-                {/* 2. CONSULTA DIRECTA (Secundario) */}
                 <button
-                  onClick={handleWhatsAppBuy}
-                  className="w-full bg-white border-2 border-green-500 text-green-600 hover:bg-green-50 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+                  onClick={handleWhatsApp}
+                  className="w-full bg-white border border-green-300 text-green-700 hover:bg-green-50 font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
                 >
-                  <FaWhatsapp size={22} />
-                  Consultar solo este producto
+                  <FaWhatsapp size={18} /> Consultar por este producto
                 </button>
               </div>
 
-              {/* CARACTERÍSTICAS Y GARANTÍA */}
-              <div className="prose prose-sm text-gray-600 mb-6">
-                <h3 className="text-gray-900 font-bold mb-2">Descripción</h3>
-                <p className="whitespace-pre-line">
-                  {product.description || "Sin descripción."}
-                </p>
-              </div>
-
-              <div className="mt-auto grid grid-cols-2 gap-4 border-t border-gray-200 pt-6">
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <FaTruck className="text-indigo-500 text-lg" /> Envío a
-                  Domicilio
+              {/* Descripción */}
+              {product.description && (
+                <div className="mb-6">
+                  <h3 className="font-display text-base text-cin-800 mb-2">
+                    Descripción
+                  </h3>
+                  <p className="text-cin-600 text-sm leading-relaxed whitespace-pre-line">
+                    {product.description}
+                  </p>
                 </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <FaShieldAlt className="text-indigo-500 text-lg" /> Garantía
-                  Escrita
+              )}
+
+              {/* Garantías */}
+              <div className="mt-auto grid grid-cols-2 gap-3 border-t border-cin-100 pt-5">
+                <div className="flex items-center gap-2 text-xs text-cin-500">
+                  <FaTruck className="text-cin-400 shrink-0" size={14} /> Envío
+                  a domicilio
+                </div>
+                <div className="flex items-center gap-2 text-xs text-cin-500">
+                  <FaShieldAlt className="text-cin-400 shrink-0" size={14} />{" "}
+                  Garantía por escrito
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── PRODUCTOS RELACIONADOS ── */}
+      {product && (
+        <RelatedProducts
+          categoryId={product.category?._id}
+          currentId={product._id}
+        />
+      )}
+
+      {/* WhatsApp flotante */}
+      <a
+        href="https://wa.me/5493815225633"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110"
+      >
+        <FaWhatsapp size={26} />
+      </a>
+
+      <Footer />
     </div>
   );
 };

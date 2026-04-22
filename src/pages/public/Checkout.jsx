@@ -4,6 +4,7 @@ import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
 import { formatPrice } from "../../utils/formatPrice";
 import axiosClient from "../../api/axiosClient";
+import { trackBeginCheckout } from "../../hooks/useAnalytics";
 import { toast } from "react-toastify";
 import Navbar from "../../components/layout/Navbar";
 import {
@@ -94,6 +95,7 @@ const Checkout = () => {
   const nextStep = () => {
     if (step === 1 && !validateStep1()) return;
     if (step === 2 && !validateStep2()) return;
+    if (step === 2) trackBeginCheckout(cartItems, totalAmount);
     setStep(step + 1);
     window.scrollTo(0, 0);
   };

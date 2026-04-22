@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axiosClient from "../../api/axiosClient";
+import useSEO from "../../hooks/useSeo";
+import { useOrganizationSchema } from "../../hooks/useSchema";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import ProductCard from "../../components/products/ProductCard";
@@ -29,6 +31,14 @@ const MargaritaFlower = ({ size = 120 }) => (
 );
 
 const Home = () => {
+  useSEO({
+    title: "Margarita Accesorios — Bufandones y Moda Femenina en Tucumán",
+    description:
+      "Descubrí nuestra colección de bufandones artesanales, accesorios y moda femenina. Diseños únicos con envíos a toda Argentina.",
+    url: typeof window !== "undefined" ? window.location.href : "",
+  });
+  useOrganizationSchema();
+
   const { products, loading: productsLoading, error } = useProducts(false);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("TODOS");

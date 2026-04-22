@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { formatPrice } from "../utils/formatPrice";
 import { useNavigate } from "react-router-dom";
+import { trackAddToCart } from "../hooks/useAnalytics";
 
 const CartContext = createContext();
 
@@ -16,7 +17,6 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem("cart", JSON.stringify(cartItems));
   }, [cartItems]);
 
-  // ─── Agregar producto ──────────────────────────────────────────────────
   const addToCart = (product) => {
     setCartItems((prev) => {
       const exists = prev.find((item) => item._id === product._id);
@@ -27,18 +27,17 @@ export const CartProvider = ({ children }) => {
         );
       }
       toast.success("Agregado al carrito 🛒");
+      trackAddToCart(product, 1);
       return [...prev, { ...product, qty: 1 }];
     });
     setIsCartOpen(true);
   };
 
-  // ─── Quitar producto ───────────────────────────────────────────────────
   const removeFromCart = (id) => {
     setCartItems((prev) => prev.filter((item) => item._id !== id));
     toast.error("Producto eliminado");
   };
 
-  // ─── Cambiar cantidad ──────────────────────────────────────────────────
   const updateQuantity = (id, newQty) => {
     if (newQty < 1) return;
     setCartItems((prev) =>
@@ -46,30 +45,27 @@ export const CartProvider = ({ children }) => {
     );
   };
 
-  // ─── Vaciar carrito ────────────────────────────────────────────────────
   const clearCart = () => {
     setCartItems([]);
     localStorage.removeItem("cart");
   };
 
-  // ─── Total ─────────────────────────────────────────────────────────────
   const totalAmount = cartItems.reduce(
     (acc, item) => acc + item.prices.cash * item.qty,
     0,
   );
 
-  // ─── Envío por WhatsApp (flujo anterior — se mantiene) ────────────────
   const sendOrder = () => {
     if (cartItems.length === 0) return;
-    const phone = "5493815225633";
+    const phone = "5493816312804";
     let message =
-      "Hola *Casa Bahia*, quisiera consultar por el siguiente pedido web: \n\n";
+      "Hola *Margarita*, quisiera consultar por el siguiente pedido: \n\n";
     cartItems.forEach((item) => {
       message += `▪️ *${item.name}* (x${item.qty})\n`;
       message += `   SKU: ${item.sku}\n`;
       message += `   Subtotal: ${formatPrice(item.prices.cash * item.qty)}\n\n`;
     });
-    message += `*TOTAL ESTIMADO (Efectivo): ${formatPrice(totalAmount)}*\n\n`;
+    message += `*TOTAL ESTIMADO: ${formatPrice(totalAmount)}*\n\n`;
     message += "¿Tienen stock disponible?";
     window.open(
       `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,

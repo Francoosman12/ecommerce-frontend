@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
+import { trackPurchase } from "../../hooks/useAnalytics";
 import Navbar from "../../components/layout/Navbar";
 import {
   FaCheckCircle,
@@ -23,6 +24,7 @@ const OrderStatus = ({ type }) => {
       try {
         const { data } = await axiosClient.get(`/payments/status/${id}`);
         setOrder(data);
+        if (type === "success") trackPurchase(data);
       } catch {
         /* silencioso */
       } finally {

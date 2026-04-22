@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useAnalytics } from "./hooks/useAnalytics";
 
 // PÁGINAS PÚBLICAS
 import Home from "./pages/public/Home";
@@ -25,9 +26,12 @@ import OrderManager from "./pages/admin/OrderManager";
 
 import RequireAuth from "./components/layout/RequireAuth";
 
-function App() {
+// Componente interno para usar useAnalytics dentro del Router
+const AppContent = () => {
+  useAnalytics(); // Trackea cada cambio de ruta automáticamente
+
   return (
-    <BrowserRouter>
+    <>
       <ToastContainer
         position="bottom-right"
         theme="colored"
@@ -63,14 +67,22 @@ function App() {
         <Route
           path="*"
           element={
-            <div className="flex justify-center items-center h-screen bg-gray-50">
-              <h2 className="text-2xl font-bold text-red-500">
-                ❌ Página no encontrada (404)
+            <div className="flex justify-center items-center h-screen bg-cin-50">
+              <h2 className="font-display text-2xl text-red-500">
+                Página no encontrada
               </h2>
             </div>
           }
         />
       </Routes>
+    </>
+  );
+};
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   );
 }

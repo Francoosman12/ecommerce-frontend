@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /checkout
+Disallow: /mis-pedidos
+Disallow: /orden/
+
+# Sitemap
+Sitemap: https://margarita-accesorios.com.ar/sitemap.xml
