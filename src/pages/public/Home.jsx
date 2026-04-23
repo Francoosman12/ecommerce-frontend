@@ -62,7 +62,7 @@ const Home = () => {
           axiosClient.get("/categories"),
           axiosClient.get("/store"),
         ]);
-        setCategories(catRes.data);
+        setCategories(Array.isArray(catRes.data) ? catRes.data : []);
         if (storeRes.data?.reelUrl) setReelUrl(storeRes.data.reelUrl);
         if (storeRes.data?.instagramFollowers)
           setFollowers(storeRes.data.instagramFollowers);
@@ -75,19 +75,29 @@ const Home = () => {
     setVisibleCount(12);
   }, [selectedCategory, searchTerm]);
 
-  const filteredProducts = products.filter((p) => {
-    if (selectedCategory !== "TODOS" && p.category?._id !== selectedCategory)
-      return false;
-    if (searchTerm && !p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-      return false;
-    return true;
-  });
+  const filteredProducts = Array.isArray(products)
+    ? products.filter((p) => {
+        if (
+          selectedCategory !== "TODOS" &&
+          p.category?._id !== selectedCategory
+        )
+          return false;
+        if (
+          searchTerm &&
+          !p.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+          return false;
+        return true;
+      })
+    : [];
 
   const productsToShow = filteredProducts.slice(0, visibleCount);
-  const featuredProducts = products.filter((p) => p.isFeatured).slice(0, 4);
-  const carouselProducts = products
-    .filter((p) => p.images?.[0]?.url)
-    .slice(0, 6);
+  const featuredProducts = Array.isArray(products)
+    ? products.filter((p) => p.isFeatured).slice(0, 4)
+    : [];
+  const carouselProducts = Array.isArray(products)
+    ? products.filter((p) => p.images?.[0]?.url).slice(0, 6)
+    : [];
 
   return (
     <div className="flex flex-col min-h-screen bg-cin-50 font-sans">
