@@ -6,6 +6,7 @@ import {
   FaClock,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const MargaritaLogo = () => (
   <svg width="42" height="42" viewBox="0 0 100 100">
@@ -28,6 +29,7 @@ const MargaritaLogo = () => (
 );
 
 const Footer = () => {
+  const { isAuthenticated, isCustomer } = useAuth();
   return (
     <footer className="bg-cin-950 text-cin-200 pt-14 pb-6 mt-auto">
       <div className="container mx-auto px-4">
@@ -68,20 +70,33 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/" className="hover:text-cin-200 transition-colors">
-                  Bufandones
+                <Link
+                  to="/nosotros"
+                  className="hover:text-cin-200 transition-colors"
+                >
+                  Quiénes somos
                 </Link>
               </li>
-              <li>
-                <Link to="/" className="hover:text-cin-200 transition-colors">
-                  Accesorios
-                </Link>
-              </li>
-              <li>
-                <Link to="/" className="hover:text-cin-200 transition-colors">
-                  Novedades
-                </Link>
-              </li>
+              {isAuthenticated && isCustomer && (
+                <li>
+                  <Link
+                    to="/mis-pedidos"
+                    className="hover:text-cin-200 transition-colors"
+                  >
+                    Mis pedidos
+                  </Link>
+                </li>
+              )}
+              {!isAuthenticated && (
+                <li>
+                  <Link
+                    to="/login"
+                    className="hover:text-cin-200 transition-colors"
+                  >
+                    Iniciar sesión
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
 
@@ -103,7 +118,7 @@ const Footer = () => {
               <li className="flex items-center gap-3 text-cin-400">
                 <FaWhatsapp className="text-green-400 shrink-0" size={16} />
                 <a
-                  href="https://wa.me/5493816312804"
+                  href="https://wa.me/5493815225633"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm hover:text-green-400 transition-colors font-medium"

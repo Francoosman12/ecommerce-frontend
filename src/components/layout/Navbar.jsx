@@ -17,6 +17,7 @@ import {
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
 import { useSearch } from "../../context/SearchContext";
+import { useProducts } from "../../hooks/useProducts";
 import { formatPrice } from "../../utils/formatPrice";
 
 const MargaritaLogo = ({ size = 36 }) => (
@@ -44,6 +45,7 @@ const Navbar = () => {
   const { isAuthenticated, isAdmin, isCustomer, user, logout } = useAuth();
   const { setSearchTerm } = useSearch();
 
+  const { products: allProducts } = useProducts(false); // usa caché
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -121,7 +123,7 @@ const Navbar = () => {
           >
             <MargaritaLogo size={38} />
             <span className="font-display text-xl text-cin-800 tracking-tight hidden sm:block">
-              Margarita
+              margarita
             </span>
           </Link>
 

@@ -1,34 +1,57 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosClient from '../api/axiosClient';
 
-// Recibimos "includeAll" (false por defecto)
+// Caché simple en memoria — persiste mientras la pestaña está abierta
+// Evita refetch innecesarios al navegar entre páginas
+const cache = {
+  public: { data: null, ts: 0 },
+  all:    { data: null, ts: 0 },
+};
+const CACHE_TTL = 60 * 1000; // 1 minuto
+
 export const useProducts = (includeAll = false) => {
-    const [products, setProducts] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+  const cacheKey = includeAll ? 'all' : 'public';
 
-    // Usamos useCallback para que la función no se recree en cada render
-    const fetchProducts = useCallback(async () => {
-        try {
-            setLoading(true);
-            
-            // 👇 Construcción de la URL: ¿Pido todo o solo activos?
-            const endpoint = includeAll ? '/products?all=true' : '/products';
-            
-            const { data } = await axiosClient.get(endpoint);
-            setProducts(data);
-            setError(null);
-        } catch (err) {
-            console.error(error);
-            setError("No se pudo cargar el catálogo.");
-        } finally {
-            setLoading(false);
-        }
-    }, [includeAll]);
+  const [products, setProducts] = useState(cache[cacheKey].data || []);
+  const [loading, setLoading]   = useState(!cache[cacheKey].data);
+  const [error, setError]       = useState(null);
 
-    useEffect(() => {
-        fetchProducts();
-    }, [fetchProducts]);
+  const fetchProducts = useCallback(async (force = false) => {
+    const cached = cache[cacheKey];
+    const isFresh = cached.data && (Date.now() - cached.ts) < CACHE_TTL;
 
-    return { products, loading, error, refetch: fetchProducts };
+    // Si hay caché fresca y no es forzado, usamos la caché
+    if (isFresh && !force) {
+      setProducts(cached.data);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const endpoint  = includeAll ? '/products?all=true' : '/products';
+      const { data }  = await axiosClient.get(endpoint);
+
+      // Guardar en caché
+      cache[cacheKey] = { data, ts: Date.now() };
+      setProducts(data);
+      setError(null);
+    } catch {
+      setError("No se pudo cargar el catálogo.");
+    } finally {
+      setLoading(false);
+    }
+  }, [includeAll, cacheKey]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // refetch forzado (limpia caché)
+  const refetch = () => {
+    cache[cacheKey] = { data: null, ts: 0 };
+    fetchProducts(true);
+  };
+
+  return { products, loading, error, refetch };
 };

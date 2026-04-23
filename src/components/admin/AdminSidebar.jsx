@@ -9,6 +9,8 @@ import {
   FaHome,
   FaTimes,
   FaClipboardList,
+  FaStore,
+  FaChartLine,
 } from "react-icons/fa";
 
 const MargaritaFlower = () => (
@@ -100,6 +102,20 @@ const AdminSidebar = ({ onClose }) => {
             onClick={handleLinkClick}
           >
             <FaTags size={15} /> Categorías
+          </NavLink>
+          <NavLink
+            to="/admin/store"
+            className={navLinkClass}
+            onClick={handleLinkClick}
+          >
+            <FaStore size={15} /> Tienda
+          </NavLink>
+          <NavLink
+            to="/admin/sales"
+            className={navLinkClass}
+            onClick={handleLinkClick}
+          >
+            <FaChartLine size={15} /> Ventas
           </NavLink>
         </nav>
       </div>

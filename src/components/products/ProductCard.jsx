@@ -9,7 +9,11 @@ const ProductCard = ({ product }) => {
 
   let imageUrl = product.images?.[0]?.url || null;
   if (imageUrl?.includes("cloudinary.com")) {
-    imageUrl = imageUrl.replace("/upload/", "/upload/f_auto,q_auto,w_400/");
+    // w_300 es suficiente para cards — ahorra ~40% de peso
+    imageUrl = imageUrl.replace(
+      "/upload/",
+      "/upload/f_auto,q_auto,w_300,h_300,c_limit/",
+    );
   }
 
   return (

@@ -3,23 +3,27 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 const RequireAuth = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, isAdmin, loading } = useAuth();
 
-  // 1. Mientras verifica el token, mostramos carga (para que no parpadee)
   if (loading) {
     return (
-      <div className="h-screen flex justify-center items-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="h-screen flex justify-center items-center bg-cin-950">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-cin-500 border-t-transparent" />
       </div>
     );
   }
 
-  // 2. Si no está autenticado, lo mandamos al Login
+  // No autenticado → login admin
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />;
   }
 
-  // 3. Si todo ok, mostramos la página hija (Dashboard, Productos, etc.)
+  // Autenticado pero NO es admin (es customer) → home público
+  // Evita que un cliente logueado acceda al panel
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   return <Outlet />;
 };
 

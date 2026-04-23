@@ -9,6 +9,8 @@ import ProductDetail from "./pages/public/ProductDetail";
 import CustomerLogin from "./pages/public/CustomerLogin";
 import Register from "./pages/public/Register";
 import Checkout from "./pages/public/Checkout";
+import MyOrders from "./pages/public/MyOrders";
+import AboutUs from "./pages/public/AboutUs";
 import {
   OrderSuccess,
   OrderFailure,
@@ -23,12 +25,17 @@ import ProductForm from "./pages/admin/ProductForm";
 import CategoryManager from "./pages/admin/CategoryManager";
 import FinancialManager from "./pages/admin/FinancialManager";
 import OrderManager from "./pages/admin/OrderManager";
+import StoreManager from "./pages/admin/StoreManager";
+import SalesDashboard from "./pages/admin/SalesDashboard";
+import SalesManager from "./pages/admin/SalesManager";
+import ManualSaleForm from "./pages/admin/ManualSaleForm";
 
+// GUARDS
 import RequireAuth from "./components/layout/RequireAuth";
+import RedirectIfAuth from "./components/layout/RedirectIfAuth";
 
-// Componente interno para usar useAnalytics dentro del Router
 const AppContent = () => {
-  useAnalytics(); // Trackea cada cambio de ruta automáticamente
+  useAnalytics();
 
   return (
     <>
@@ -43,17 +50,45 @@ const AppContent = () => {
         {/* ── ZONA PÚBLICA ── */}
         <Route path="/" element={<Home />} />
         <Route path="/product/:id" element={<ProductDetail />} />
-        <Route path="/login" element={<CustomerLogin />} />
-        <Route path="/register" element={<Register />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/orden/exito/:id" element={<OrderSuccess />} />
         <Route path="/orden/fallo/:id" element={<OrderFailure />} />
         <Route path="/orden/pendiente/:id" element={<OrderPending />} />
+        <Route path="/mis-pedidos" element={<MyOrders />} />
+        <Route path="/nosotros" element={<AboutUs />} />
+
+        {/* Rutas protegidas contra usuarios ya logueados */}
+        <Route
+          path="/login"
+          element={
+            <RedirectIfAuth>
+              <CustomerLogin />
+            </RedirectIfAuth>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <RedirectIfAuth>
+              <Register />
+            </RedirectIfAuth>
+          }
+        />
 
         {/* ── ZONA ADMIN ── */}
-        <Route path="/admin" element={<Navigate to="/admin/login" />} />
-        <Route path="/admin/login" element={<Login />} />
+        <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
 
+        {/* Admin login — si ya sos admin redirige al panel, si sos customer al home */}
+        <Route
+          path="/admin/login"
+          element={
+            <RedirectIfAuth adminOnly={true}>
+              <Login />
+            </RedirectIfAuth>
+          }
+        />
+
+        {/* Solo admins — si sos customer te manda al home */}
         <Route element={<RequireAuth />}>
           <Route path="/admin/dashboard" element={<Dashboard />} />
           <Route path="/admin/products/new" element={<ProductForm />} />
@@ -61,6 +96,10 @@ const AppContent = () => {
           <Route path="/admin/categories" element={<CategoryManager />} />
           <Route path="/admin/financial" element={<FinancialManager />} />
           <Route path="/admin/orders" element={<OrderManager />} />
+          <Route path="/admin/store" element={<StoreManager />} />
+          <Route path="/admin/sales" element={<SalesDashboard />} />
+          <Route path="/admin/sales/history" element={<SalesManager />} />
+          <Route path="/admin/sales/new" element={<ManualSaleForm />} />
         </Route>
 
         {/* 404 */}
