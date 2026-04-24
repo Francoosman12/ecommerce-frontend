@@ -118,7 +118,7 @@ const Footer = () => {
               <li className="flex items-center gap-3 text-cin-400">
                 <FaWhatsapp className="text-green-400 shrink-0" size={16} />
                 <a
-                  href="https://wa.me/5493815225633"
+                  href="https://wa.me/5493816312804"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm hover:text-green-400 transition-colors font-medium"
