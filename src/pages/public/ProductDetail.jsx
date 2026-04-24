@@ -206,7 +206,7 @@ const ProductDetail = () => {
 
   const handleWhatsApp = () => {
     if (!product) return;
-    const phone = "5493815225633";
+    const phone = "5493816312804";
     const message = `Hola Margarita, quería consultar por: *${product.name}* (SKU: ${product.sku}).`;
     window.open(
       `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
@@ -464,7 +464,7 @@ const ProductDetail = () => {
 
       {/* WhatsApp flotante */}
       <a
-        href="https://wa.me/5493815225633"
+        href="https://wa.me/5493816312804"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110"

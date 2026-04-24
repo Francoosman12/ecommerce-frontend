@@ -123,7 +123,7 @@ const Navbar = () => {
           >
             <MargaritaLogo size={38} />
             <span className="font-display text-xl text-cin-800 tracking-tight hidden sm:block">
-              margarita
+              Margarita
             </span>
           </Link>
 
